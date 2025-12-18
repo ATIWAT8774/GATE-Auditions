@@ -27,7 +27,68 @@
           }
         }
       }
-    };
+    }
+    // ✅ Alias: ใช้ชื่อที่อ่านง่ายในหน้า "กรรมการ"
+    function getQueueListByLevel(level) {
+      return getQueueByLevel(level);
+    }
+
+    // ✅ ดูข้อมูลนักเรียนแบบย่อ (ใช้ในหน้า "กรรมการ")
+    function openStudentQuickView(studentId) {
+      const s = studentsData.find(x => String(x.national_id) === String(studentId));
+      if (!s) return;
+
+      const count = Object.keys(getInterviewScores(s) || {}).length;
+      const final = calcInterviewFinal(s);
+
+      showModal(`
+        <div class="p-6 md:p-10">
+          <div class="flex items-start justify-between gap-4 mb-6">
+            <div class="min-w-0">
+              <h2 class="text-2xl md:text-3xl font-extrabold text-gray-900 truncate">${s.name}</h2>
+              <p class="text-gray-600 font-medium truncate">${s.current_school || '-'} <span class="mx-2 text-gray-300">•</span> #${s.interview_order || '-'}</p>
+            </div>
+            ${getLevelBadge(s.level)}
+          </div>
+
+          <div class="bg-gradient-to-r from-orange-50 to-white border-2 border-orange-100 rounded-[2rem] p-6 mb-6">
+            <div class="grid grid-cols-2 sm:grid-cols-4 gap-3">
+              <div class="bg-white rounded-2xl border border-gray-100 p-4 text-center"><p class="text-xs text-gray-500 font-bold mb-1">คณิต</p><p class="text-xl font-extrabold">${s.math_score || 0}</p></div>
+              <div class="bg-white rounded-2xl border border-gray-100 p-4 text-center"><p class="text-xs text-gray-500 font-bold mb-1">วิทย์</p><p class="text-xl font-extrabold">${s.science_score || 0}</p></div>
+              <div class="bg-white rounded-2xl border border-gray-100 p-4 text-center"><p class="text-xs text-gray-500 font-bold mb-1">อังกฤษ</p><p class="text-xl font-extrabold">${s.english_score || 0}</p></div>
+              <div class="bg-orange-500 text-white rounded-2xl p-4 text-center"><p class="text-xs opacity-90 font-bold mb-1">รวมข้อเขียน</p><p class="text-2xl font-extrabold">${s.total_score || 0}</p></div>
+            </div>
+          </div>
+
+          ${s.ability ? `
+            <div class="bg-purple-50 border-2 border-purple-100 rounded-[2rem] p-6 mb-6">
+              <p class="text-sm font-extrabold text-purple-700 mb-2">ความสามารถพิเศษ</p>
+              <p class="text-gray-900 font-medium break-words">${s.ability}</p>
+            </div>
+          ` : ''}
+
+          <div class="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-6">
+            <div class="bg-white border border-gray-100 rounded-2xl p-5">
+              <p class="text-sm font-bold text-gray-700">คะแนนสัมภาษณ์เฉลี่ย (จากข้อมูลที่มี)</p>
+              <p class="text-3xl font-extrabold text-orange-600 mt-1">${Math.round(final.total100 * 100) / 100}</p>
+            </div>
+            <div class="bg-white border border-gray-100 rounded-2xl p-5">
+              <p class="text-sm font-bold text-gray-700">จำนวนกรรมการที่ให้คะแนน</p>
+              <p class="text-3xl font-extrabold text-gray-900 mt-1">${count}/${TOTAL_JUDGES}</p>
+            </div>
+          </div>
+
+          ${s.audio_file ? `
+            <a href="${s.audio_file}" target="_blank" class="btn-secondary w-full py-3 rounded-xl font-bold flex items-center justify-center mb-4">
+              เปิดไฟล์เสียงแนะนำตัว
+            </a>
+          ` : ''}
+
+          <button onclick="closeModal(this.closest('.modal-overlay'))" class="btn-primary w-full px-6 py-4 rounded-2xl font-bold text-xl text-white shadow-glow-primary">ปิด</button>
+        </div>
+      `);
+    }
+;
   </script>
 
   <style>
@@ -134,7 +195,7 @@
   <script>
     // ==========================================
     // 🔴 ใส่ URL Web App (/exec) ที่ Deploy แล้ว
-    const API_URL = "https://script.google.com/macros/s/AKfycbzF5t3pt3kuSeqkOohfmw2uYfkWmwxYt5DBCk7XtLwGUO_uexzqWundp3MlBBdqoJaj/exec";
+    const API_URL = "/api/gas";
     // ==========================================
 
     // =====================
@@ -682,6 +743,8 @@
     // Live UI update (ไม่กระพริบตอน auto refresh)
     // ============================================================
     function updateLiveUI() {
+      const last = document.getElementById('liveLastSync');
+      if (last) last.textContent = new Date().toLocaleTimeString('th-TH', { hour:'2-digit', minute:'2-digit', second:'2-digit' });
       const elJ = document.getElementById('liveCurrentJuniorQueue');
       const elS = document.getElementById('liveCurrentSeniorQueue');
       if (elJ) elJ.textContent = (queueState.junior ?? '-') || '-';
@@ -697,12 +760,67 @@
       }
 
       // committee current student card
-      const curName = document.getElementById('liveCommitteeCurrentName');
-      const curOrder = document.getElementById('liveCommitteeCurrentOrder');
       if (currentUser?.user_type === 'committee') {
         const cur = getCurrentStudentByLevel(currentUser.level);
+        const already = cur ? hasCommitteeScored(cur, currentUser.username) : false;
+
+        const curName = document.getElementById('liveCommitteeCurrentName');
+        const curOrder = document.getElementById('liveCommitteeCurrentOrder');
+        const curSchool = document.getElementById('liveCommitteeCurrentSchool');
+        const curExam = document.getElementById('liveCommitteeCurrentExam');
+        const curAbility = document.getElementById('liveCommitteeCurrentAbility');
+        const audioLink = document.getElementById('liveCommitteeAudioLink');
+        const scoreBtn = document.getElementById('liveCommitteeScoreBtn');
+
         if (curName) curName.textContent = cur?.name || '-';
         if (curOrder) curOrder.textContent = cur?.interview_order || '-';
+        if (curSchool) curSchool.textContent = cur?.current_school || '-';
+        if (curExam) curExam.textContent = cur?.exam_number || '-';
+        if (curAbility) curAbility.textContent = cur?.ability || (cur ? '-' : '-');
+
+        if (audioLink) {
+          if (cur?.audio_file) {
+            audioLink.href = cur.audio_file;
+            audioLink.classList.remove('opacity-60', 'pointer-events-none');
+          } else {
+            audioLink.href = '#';
+            audioLink.classList.add('opacity-60', 'pointer-events-none');
+          }
+        }
+
+        if (scoreBtn) {
+          if (!cur || already) {
+            scoreBtn.classList.add('opacity-60', 'pointer-events-none');
+          } else {
+            scoreBtn.classList.remove('opacity-60', 'pointer-events-none');
+            scoreBtn.setAttribute('onclick', `openScoreForm('${cur.national_id}')`);
+          }
+        }
+
+        // next list
+        const nextBox = document.getElementById('liveCommitteeNextList');
+        if (nextBox) {
+          const queueList = getQueueByLevel(currentUser.level);
+          const curIdx = cur ? queueList.findIndex(s => String(s.national_id) === String(cur.national_id)) : -1;
+          const nextList = (curIdx >= 0 ? queueList.slice(curIdx + 1) : queueList).slice(0, 6);
+
+          nextBox.innerHTML = nextList.length ? nextList.map(s => `
+            <div class="bg-white border border-gray-100 rounded-2xl p-4 flex items-center justify-between gap-3">
+              <div class="flex items-center gap-3 min-w-0">
+                <div class="w-10 h-10 bg-purple-100 text-purple-700 rounded-xl flex items-center justify-center font-extrabold">${s.interview_order || '-'}</div>
+                <div class="min-w-0">
+                  <p class="font-bold text-gray-900 truncate">${s.name}</p>
+                  <p class="text-xs text-gray-500 truncate">${s.current_school || '-'}</p>
+                </div>
+              </div>
+              <button class="text-sm font-bold text-orange-600 hover:text-orange-700"
+                      onclick="openStudentQuickView('${s.national_id}')">ดู</button>
+            </div>
+          `).join('') : `<p class="text-sm text-gray-400 text-center py-6">ไม่มีคิวถัดไป</p>`;
+        }
+
+        // history (ไม่กระพริบทั้งหน้า แต่อัปเดตกล่องประวัติได้)
+        renderCommitteeHistory();
       }
 
       // admin queue numbers
@@ -823,101 +941,205 @@
     // Committee Dashboard
     // ============================================================
     function renderCommitteeDashboard() {
-      startAutoRefresh();
+  startAutoRefresh();
 
-      const currentStudent = getCurrentStudentByLevel(currentUser.level);
+  // queues (for header cards)
+  const juniorQueue = studentsData
+    .filter(s => s.level === 'junior' && s.confirmed && !s.is_skipped)
+    .sort((a,b) => Number(a.interview_order||999999) - Number(b.interview_order||999999));
+  const seniorQueue = studentsData
+    .filter(s => s.level === 'senior' && s.confirmed && !s.is_skipped)
+    .sort((a,b) => Number(a.interview_order||999999) - Number(b.interview_order||999999));
 
-      document.getElementById('app').innerHTML = `
-        <div class="min-h-full p-4 md:p-8 pb-20 bg-gray-50">
-          <div class="max-w-6xl mx-auto space-y-8">
+  const currentJuniorQueue = juniorQueue[0]?.interview_order ?? '-';
+  const currentSeniorQueue = seniorQueue[0]?.interview_order ?? '-';
 
-            <div class="bg-white rounded-[2rem] shadow-sm p-6 flex justify-between items-center">
-              <div>
-                <h1 class="text-2xl font-bold text-gray-800">ยินดีต้อนรับ, ${currentUser.name || currentUser.username}</h1>
-                <p class="text-gray-500">กรรมการคุมสอบ: ${currentUser.level === 'junior' ? 'ม.ต้น' : 'ม.ปลาย'} | คิวกลางตอนนี้: <span id="liveCommitteeCurrentOrder" class="font-extrabold">${currentStudent?.interview_order || '-'}</span></p>
-              </div>
-              <button onclick="logout()" class="text-red-500 font-bold border border-red-200 px-4 py-2 rounded-xl hover:bg-red-50">ออกจากระบบ</button>
+  const myLevel = currentUser.level || 'junior';
+  const levelLabel = (myLevel === 'junior') ? 'ม.ต้น' : 'ม.ปลาย';
+  const levelColor = (myLevel === 'junior') ? 'purple' : 'orange';
+
+  // list for this committee level
+  const list = studentsData
+    .filter(s => s.level === myLevel && s.confirmed)
+    .sort((a,b) => Number(a.interview_order||999999) - Number(b.interview_order||999999));
+
+  const statusPill = (s) => {
+    const scored = hasCommitteeScored(s, currentUser.username);
+    if (scored) {
+      return `<span class="inline-flex items-center gap-2 px-3 py-1.5 rounded-full text-sm font-bold bg-green-100 text-green-700 border border-green-200">
+        <span class="w-2 h-2 bg-green-500 rounded-full"></span> ให้คะแนนแล้ว
+      </span>`;
+    }
+    return `<span class="inline-flex items-center gap-2 px-3 py-1.5 rounded-full text-sm font-bold bg-gray-100 text-gray-600 border border-gray-200">
+      <span class="w-2 h-2 bg-gray-400 rounded-full"></span> รอคะแนน
+    </span>`;
+  };
+
+  const scoreBtn = (s) => {
+    const scored = hasCommitteeScored(s, currentUser.username);
+    if (scored) {
+      return `<button class="px-4 py-2 rounded-xl font-bold text-sm bg-gray-200 text-gray-500 cursor-not-allowed" disabled>กรอกคะแนน</button>`;
+    }
+    return `<button onclick="openScoreForm('${s.national_id}')" class="btn-primary text-white px-4 py-2 rounded-xl font-bold text-sm shadow-glow-primary">กรอกคะแนน</button>`;
+  };
+
+  document.getElementById('app').innerHTML = `
+    <div class="min-h-full w-full overflow-x-hidden">
+      <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 sm:py-10 space-y-6">
+
+        <!-- Header Card -->
+        <div class="glass-effect rounded-[2.5rem] shadow-soft-xl p-5 sm:p-7 flex items-center justify-between gap-4 relative overflow-hidden">
+          <div class="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-orange-400 to-purple-500"></div>
+
+          <div class="flex items-center gap-4 min-w-0">
+            <div class="w-14 h-14 sm:w-16 sm:h-16 rounded-2xl bg-white/80 border border-white/60 shadow-sm flex items-center justify-center shrink-0">
+              <img src="https://img5.pic.in.th/file/secure-sv1/LOGO-SAPA-1.png" alt="LOGO" class="h-10 w-auto sm:h-12 object-contain"/>
             </div>
+            <div class="min-w-0">
+              <p class="text-xl sm:text-2xl font-extrabold text-gray-900 truncate">${currentUser.name || currentUser.username}</p>
+              <p class="text-sm sm:text-base font-bold text-gray-600 truncate">กรรมการสอบสัมภาษณ์ <span class="font-extrabold ${levelColor === 'purple' ? 'text-purple-600' : 'text-orange-600'}">${levelLabel}</span></p>
+            </div>
+          </div>
 
-            ${currentStudent ? `
-              <div class="bg-white border-l-8 border-orange-500 rounded-[2.5rem] shadow-lg p-8 relative overflow-hidden">
-                <div class="flex flex-col md:flex-row items-center gap-8">
+          <button onclick="logout()" class="btn-secondary px-5 py-3 rounded-2xl font-extrabold text-sm sm:text-base shrink-0">
+            ออกจากระบบ
+          </button>
+        </div>
 
-                  <div class="text-center shrink-0">
-                    <p class="text-gray-500 font-bold mb-2 uppercase tracking-wide">คิวปัจจุบัน</p>
-                    <div class="w-32 h-32 bg-orange-500 text-white rounded-3xl flex items-center justify-center text-6xl font-extrabold shadow-orange-200 shadow-xl">
-                      ${currentStudent.interview_order || '-'}
-                    </div>
-                  </div>
-
-                  <div class="flex-1 text-center md:text-left">
-                    <h2 id="liveCommitteeCurrentName" class="text-3xl md:text-4xl font-extrabold text-gray-900 mb-2">${currentStudent.name}</h2>
-                    <p class="text-lg md:text-xl text-gray-600 mb-4">${currentStudent.current_school || '-'} (เลขที่นั่งสอบ: ${currentStudent.exam_number || '-'})</p>
-                  </div>
-
-                  <div class="shrink-0 w-full md:w-auto">
-                    <button onclick="openScoreForm('${currentStudent.national_id}')" class="btn-primary w-full md:w-auto text-white px-8 py-4 rounded-2xl font-bold text-xl shadow-glow-primary">ให้คะแนน</button>
-                  </div>
-                </div>
+        <!-- Queue Cards -->
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-5">
+          <div class="glass-effect rounded-[2.5rem] shadow-soft-xl p-6 sm:p-8 relative overflow-hidden">
+            <div class="absolute -right-10 -top-10 w-40 h-40 bg-purple-100 rounded-full opacity-60"></div>
+            <div class="relative z-10">
+              <h3 class="text-xl font-extrabold text-purple-700 mb-4">คิวปัจจุบัน ม.ต้น</h3>
+              <div class="flex items-end justify-between gap-4">
+                <div class="text-6xl sm:text-7xl font-extrabold text-purple-700 tabular-nums" id="liveCurrentJuniorQueue">${currentJuniorQueue}</div>
+                <span class="px-4 py-2 rounded-full bg-purple-100 text-purple-700 font-bold text-sm sm:text-base">คิวกลาง (Admin คุม)</span>
               </div>
+            </div>
+          </div>
 
-              <div class="mt-8">
-                <h3 class="text-xl font-bold text-gray-700 mb-4">ประวัติการบันทึกคะแนนของคุณ</h3>
-                <div id="committee-history" class="bg-white rounded-2xl p-6 shadow-sm">
-                  <p class="text-gray-400 text-center">กำลังโหลดประวัติ...</p>
-                </div>
+          <div class="glass-effect rounded-[2.5rem] shadow-soft-xl p-6 sm:p-8 relative overflow-hidden">
+            <div class="absolute -right-10 -top-10 w-40 h-40 bg-orange-100 rounded-full opacity-60"></div>
+            <div class="relative z-10">
+              <h3 class="text-xl font-extrabold text-orange-700 mb-4">คิวปัจจุบัน ม.ปลาย</h3>
+              <div class="flex items-end justify-between gap-4">
+                <div class="text-6xl sm:text-7xl font-extrabold text-orange-700 tabular-nums" id="liveCurrentSeniorQueue">${currentSeniorQueue}</div>
+                <span class="px-4 py-2 rounded-full bg-orange-100 text-orange-700 font-bold text-sm sm:text-base">คิวกลาง (Admin คุม)</span>
               </div>
-            ` : `
-              <div class="text-center py-20">
-                <div class="w-24 h-24 bg-gray-100 rounded-full flex items-center justify-center mx-auto mb-4 text-4xl">😴</div>
-                <h2 class="text-2xl font-bold text-gray-400">ยังไม่มีคิวสัมภาษณ์ หรือ หมดคิวแล้ว</h2>
-                <p class="text-gray-400">กรุณารอ Admin เรียกคิวถัดไป...</p>
-              </div>
-            `}
+            </div>
           </div>
         </div>
-      `;
 
-      renderCommitteeHistory();
-    }
+        <!-- List -->
+        <div class="glass-effect rounded-[2.5rem] shadow-soft-xl p-5 sm:p-7">
+          <div class="flex flex-col sm:flex-row sm:items-end sm:justify-between gap-3 mb-5">
+            <h2 class="text-3xl sm:text-4xl font-extrabold text-gray-900">
+              รายชื่อผู้เข้าสอบสัมภาษณ์ <span class="${levelColor === 'purple' ? 'text-purple-700' : 'text-orange-700'}">${levelLabel}</span>
+            </h2>
+            <div class="flex items-center gap-2 text-sm text-gray-500 font-bold">
+              <span class="inline-flex items-center gap-2"><span class="w-2.5 h-2.5 bg-green-500 rounded-full"></span>ให้คะแนนแล้ว</span>
+              <span class="inline-flex items-center gap-2"><span class="w-2.5 h-2.5 bg-gray-400 rounded-full"></span>รอคะแนน</span>
+            </div>
+          </div>
+
+          <div class="w-full overflow-x-auto rounded-2xl border border-gray-100 bg-white/60">
+            <table class="min-w-[980px] w-full text-left">
+              <thead class="bg-white">
+                <tr class="text-gray-700">
+                  <th class="px-4 py-4 font-extrabold">ลำดับที่</th>
+                  <th class="px-4 py-4 font-extrabold">ชื่อ-สกุล</th>
+                  <th class="px-4 py-4 font-extrabold">ความสามารถพิเศษ</th>
+                  <th class="px-4 py-4 font-extrabold text-center">คณิต</th>
+                  <th class="px-4 py-4 font-extrabold text-center">วิทย์</th>
+                  <th class="px-4 py-4 font-extrabold text-center">อังกฤษ</th>
+                  <th class="px-4 py-4 font-extrabold text-center">รวมข้อเขียน</th>
+                  <th class="px-4 py-4 font-extrabold text-center">คะแนนสอบสัมภาษณ์</th>
+                  <th class="px-4 py-4 font-extrabold text-center">สถานะ</th>
+                  <th class="px-4 py-4 font-extrabold text-center">จัดการ</th>
+                </tr>
+              </thead>
+              <tbody>
+                ${list.map((s, idx) => {
+                  const myScore = getInterviewScores(s)?.[currentUser.username]?.total;
+                  const interviewScoreTxt = (myScore !== undefined) ? String(myScore) : '-';
+                  return `
+                    <tr class="border-t border-gray-100 hover:bg-orange-50/40 transition-colors">
+                      <td class="px-4 py-4 font-bold text-gray-700">${s.interview_order || (idx+1)}</td>
+                      <td class="px-4 py-4">
+                        <div class="font-extrabold text-gray-900">${s.name}</div>
+                        <div class="text-xs text-gray-500 font-bold">เลขที่นั่งสอบ: ${s.exam_number || '-'}</div>
+                      </td>
+                      <td class="px-4 py-4 text-gray-700 font-bold">${(s.ability || '-')}</td>
+                      <td class="px-4 py-4 text-center font-extrabold">${s.math_score || 0}</td>
+                      <td class="px-4 py-4 text-center font-extrabold">${s.science_score || 0}</td>
+                      <td class="px-4 py-4 text-center font-extrabold">${s.english_score || 0}</td>
+                      <td class="px-4 py-4 text-center font-extrabold">${s.total_score || 0}</td>
+                      <td class="px-4 py-4 text-center">
+                        <span class="inline-flex items-center justify-center px-3 py-1.5 rounded-full bg-gray-100 text-gray-700 font-extrabold">
+                          ${interviewScoreTxt}
+                        </span>
+                      </td>
+                      <td class="px-4 py-4 text-center">${statusPill(s)}</td>
+                      <td class="px-4 py-4 text-center">${scoreBtn(s)}</td>
+                    </tr>
+                  `;
+                }).join('')}
+              </tbody>
+            </table>
+          </div>
+
+          <div class="mt-6">
+            <h3 class="text-lg font-extrabold text-gray-800 mb-3">ประวัติการบันทึกคะแนนของคุณ</h3>
+            <div id="committee-history" class="bg-white/70 border border-gray-100 rounded-2xl p-4 sm:p-6">
+              <p class="text-gray-400 text-center">กำลังโหลดประวัติ...</p>
+            </div>
+          </div>
+        </div>
+
+      </div>
+    </div>
+  `;
+
+  renderCommitteeHistory();
+  updateLiveUI(); // ensure queue numbers correct right away
+}
+
 
     function renderCommitteeHistory() {
-      const box = document.getElementById('committee-history');
-      if (!box) return;
+  const box = document.getElementById('committee-history');
+  if (!box) return;
 
-      const my = studentsData
-        .filter(s => s.confirmed && hasCommitteeScored(s, currentUser.username))
-        .sort((a,b) => num(a.interview_order, 999999) - num(b.interview_order, 999999));
+  const my = studentsData
+    .filter(s => s.confirmed && hasCommitteeScored(s, currentUser.username))
+    .sort((a,b) => Number(a.interview_order||999999) - Number(b.interview_order||999999));
 
-      if (my.length === 0) {
-        box.innerHTML = `<p class="text-gray-400 text-center text-sm">ยังไม่มีประวัติการให้คะแนน</p>`;
-        return;
-      }
+  if (my.length === 0) {
+    box.innerHTML = `<p class="text-gray-400 text-center text-sm">ยังไม่มีประวัติการให้คะแนน</p>`;
+    return;
+  }
 
-      box.innerHTML = `
-        <div class="space-y-3">
-          ${my.map(s => {
-            const scores = getInterviewScores(s)[currentUser.username];
-            return `
-              <div class="border border-gray-100 rounded-xl p-4 flex items-center justify-between">
-                <div>
-                  <p class="font-bold text-gray-800">${s.name} <span class="text-gray-400 font-normal">(#${s.interview_order || '-'})</span></p>
-                  <p class="text-sm text-gray-500">${s.current_school || '-'}</p>
-                </div>
-                <div class="text-right">
-                  <p class="text-sm text-gray-500">คะแนนรวม</p>
-                  <p class="font-extrabold text-lg text-orange-600">${scores?.total ?? '-'}</p>
-                </div>
-              </div>
-            `;
-          }).join('')}
-        </div>
-      `;
-    }
+  box.innerHTML = `
+    <div class="space-y-3">
+      ${my.map(s => {
+        const scores = getInterviewScores(s)?.[currentUser.username];
+        return `
+          <div class="border border-gray-100 rounded-2xl p-4 flex items-center justify-between bg-white">
+            <div class="min-w-0">
+              <p class="font-extrabold text-gray-900 truncate">${s.name} <span class="text-gray-400 font-bold">(#${s.interview_order || '-'})</span></p>
+              <p class="text-sm text-gray-500 font-bold truncate">${s.current_school || '-'}</p>
+            </div>
+            <div class="text-right shrink-0">
+              <p class="text-xs text-gray-400 font-bold">คะแนนรวม</p>
+              <p class="font-extrabold text-xl text-orange-600 tabular-nums">${scores?.total ?? '-'}</p>
+            </div>
+          </div>
+        `;
+      }).join('')}
+    </div>
+  `;
+}
 
-    // ============================================================
-    // Score Form Modal (สวย/พอดีมือถือ + loading/process ขึ้นแน่)
-    // ============================================================
     function openScoreForm(studentId) {
       const student = studentsData.find(s => String(s.national_id) === String(studentId));
       if (!student) return;
