@@ -1,0 +1,1456 @@
+<!doctype html>
+<html lang="th" class="h-full">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>ระบบยืนยันสิทธิ์สอบสัมภาษณ์ GATE</title>
+
+  <!-- Tailwind (CDN เหมาะกับ dev; production แนะนำ build) -->
+  <script src="https://cdn.tailwindcss.com"></script>
+
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Athiti:wght@200;300;400;500;600;700&family=Kodchasan:ital,wght@0,200;0,300;0,400;0,500;0,600;0,700;1,200;1,300;1,400;1,500;1,600;1,700&display=swap" rel="stylesheet">
+
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          colors: {
+            primary: { DEFAULT: '#f97316', 50: '#fff7ed', 100: '#ffedd5', 200: '#fed7aa', 300: '#fdba74', 400: '#fb923c', 500: '#f97316', 600: '#ea580c', 700: '#c2410c', 800: '#9a3412', 900: '#7c2d12' },
+            secondary: { DEFAULT: '#9333ea', 50: '#faf5ff', 100: '#f3e8ff', 200: '#e9d5ff', 300: '#d8b4fe', 400: '#c084fc', 500: '#a855f7', 600: '#9333ea', 700: '#7e22ce', 800: '#6b21a8', 900: '#581c87' },
+          },
+          boxShadow: {
+            'soft-xl': '0 20px 25px -5px rgba(0,0,0,.05), 0 8px 10px -6px rgba(0,0,0,.02)',
+            'glow-primary': '0 4px 20px -2px rgba(249,115,22,.5)',
+            'glow-secondary': '0 4px 20px -2px rgba(147,51,234,.5)',
+          }
+        }
+      }
+    }
+  </script>
+
+  <style>
+    body{
+      font-family:'Athiti',sans-serif;
+      background-color:#fff7ed;
+      background-image:radial-gradient(#f97316 0.5px, transparent 0.5px), radial-gradient(#f97316 0.5px, #fff7ed 0.5px);
+      background-size:20px 20px;
+      background-position:0 0, 10px 10px;
+    }
+    .main-bg-gradient{
+      background:radial-gradient(at left top, rgba(255,237,213,.7) 0%, rgba(255,255,255,0) 45%),
+                 radial-gradient(at right bottom, rgba(243,232,255,.7) 0%, rgba(255,255,255,0) 45%);
+    }
+    .glass-effect{
+      background:rgba(255,255,255,.85);
+      backdrop-filter:blur(12px);
+      border:1px solid rgba(255,255,255,.3);
+    }
+    .level-badge-junior{border-left:4px solid #9333ea;}
+    .level-badge-senior{border-left:4px solid #f97316;}
+    .modal-overlay{
+      background:rgba(0,0,0,.5);
+      backdrop-filter:blur(8px);
+    }
+    .spinner{border:3px solid #f3f4f6;border-top:3px solid #f97316;border-radius:50%;width:50px;height:50px;animation:spin 1s linear infinite;}
+    @keyframes spin{0%{transform:rotate(0deg)}100%{transform:rotate(360deg)}}
+    .checkmark{width:60px;height:60px;border-radius:50%;display:block;stroke-width:3;stroke:#22c55e;stroke-miterlimit:10;box-shadow:inset 0 0 0 #22c55e;animation:fill .4s ease-in-out .4s forwards, scale .3s ease-in-out .9s both;}
+    .checkmark-circle{stroke-dasharray:166;stroke-dashoffset:166;stroke-width:3;stroke-miterlimit:10;stroke:#22c55e;fill:none;animation:stroke .6s cubic-bezier(.65,0,.45,1) forwards;}
+    .checkmark-check{transform-origin:50% 50%;stroke-dasharray:48;stroke-dashoffset:48;animation:stroke .3s cubic-bezier(.65,0,.45,1) .8s forwards;}
+    @keyframes stroke{100%{stroke-dashoffset:0}}
+    @keyframes scale{0%,100%{transform:none}50%{transform:scale3d(1.1,1.1,1)}}
+    @keyframes fill{100%{box-shadow:inset 0 0 0 30px #22c55e}}
+    .scroll-container{max-height:75vh;overflow-y:auto;}
+    .btn-primary{
+      background:linear-gradient(135deg,#f97316 0%,#ea580c 100%);
+      transition:all .3s cubic-bezier(.4,0,.2,1);
+    }
+    .btn-primary:hover{transform:translateY(-2px);box-shadow:0 10px 20px -10px rgba(249,115,22,.6);}
+    .btn-primary:active{transform:translateY(0);}
+    .btn-secondary{
+      background:white;border:2px solid #f97316;color:#f97316;
+      transition:all .3s ease;
+    }
+    .btn-secondary:hover{background:#fff7ed;transform:translateY(-2px);box-shadow:0 4px 12px rgba(249,115,22,.15);}
+    .card{transition:all .3s cubic-bezier(.4,0,.2,1);}
+    .card:hover{transform:translateY(-4px);box-shadow:0 20px 25px -5px rgba(0,0,0,.1),0 8px 10px -6px rgba(0,0,0,.1);}
+    .input-field{
+      width:100%;
+      padding:.75rem 1rem;
+      border:2px solid #e5e7eb;
+      border-radius:1rem;
+      transition:all .2s ease;
+      background:rgba(255,255,255,.8);
+      backdrop-filter:blur(8px);
+      outline:none;
+    }
+    .input-field:focus{
+      border-color:#f97316;
+      box-shadow:0 0 0 4px rgba(249,115,22,.15);
+      background:#fff;
+    }
+    .text-gradient-primary{
+      background:linear-gradient(135deg,#f97316 0%,#ea580c 100%);
+      -webkit-background-clip:text;
+      -webkit-text-fill-color:transparent;
+    }
+    .text-gradient-secondary{
+      background:linear-gradient(135deg,#9333ea 0%,#7e22ce 100%);
+      -webkit-background-clip:text;
+      -webkit-text-fill-color:transparent;
+    }
+  </style>
+</head>
+
+<body class="h-full w-full m-0 p-0">
+  <main class="h-full w-full overflow-auto main-bg-gradient">
+    <div id="app" class="min-h-full w-full"></div>
+  </main>
+
+  <script>
+    // ==========================================
+    // 🔴 ใส่ URL Web App (/exec) ที่ Deploy แล้ว
+    const API_URL = "https://script.google.com/macros/s/AKfycbzF5t3pt3kuSeqkOohfmw2uYfkWmwxYt5DBCk7XtLwGUO_uexzqWundp3MlBBdqoJaj/exec";
+    // ==========================================
+
+    // Global State
+    let currentUser = null;
+    let studentsData = [];
+    let committeesData = [];
+    let allData = [];
+    let autoRefreshInterval = null;
+
+    // file upload state
+    let uploadedAudio = null; // {fileData, mimeType, fileName}
+
+    const AUTO_REFRESH_MS = 5000;
+    const TOTAL_JUDGES = 8; // ตามที่คุณบอก "หารด้วย 8"
+
+    // ---------------- Session ----------------
+    function saveSession(session){ localStorage.setItem('gate_session', JSON.stringify(session)); }
+    function loadSession(){
+      try { return JSON.parse(localStorage.getItem('gate_session') || 'null'); }
+      catch { return null; }
+    }
+    function clearSession(){ localStorage.removeItem('gate_session'); }
+
+    // ============================================================
+    // ✅ Modal Utilities (Responsive: Mobile-first, no overflow)
+    // ============================================================
+    function showModal(innerHtml){
+      const overlay = document.createElement('div');
+      overlay.className = 'modal-overlay fixed inset-0 z-[9999] flex items-end sm:items-center justify-center';
+
+      overlay.innerHTML = `
+        <div class="absolute inset-0" onclick="closeModal(this.parentElement)"></div>
+
+        <div class="relative glass-effect w-full sm:w-[96vw] sm:max-w-4xl
+                    h-[92vh] sm:h-auto sm:max-h-[92vh]
+                    rounded-t-[2rem] sm:rounded-[2rem]
+                    shadow-soft-xl overflow-hidden">
+
+          <button class="absolute top-3 right-3 sm:top-4 sm:right-4 z-10
+                        w-10 h-10 rounded-xl bg-white/80 hover:bg-white
+                        border border-gray-200 flex items-center justify-center"
+                  onclick="closeModal(this.closest('.modal-overlay'))"
+                  aria-label="Close">✕</button>
+
+          <div class="h-full max-h-[92vh] overflow-y-auto overscroll-contain p-5 sm:p-8">
+            ${innerHtml}
+          </div>
+        </div>
+      `;
+
+      document.body.appendChild(overlay);
+      document.documentElement.style.overflow = 'hidden';
+      document.body.style.overflow = 'hidden';
+      return overlay;
+    }
+
+    function closeModal(overlayEl){
+      if (!overlayEl) return;
+      overlayEl.remove();
+      if (!document.querySelector('.modal-overlay')){
+        document.documentElement.style.overflow = '';
+        document.body.style.overflow = '';
+      }
+    }
+
+    function showLoadingModal(text){
+      return showModal(`
+        <div class="py-10 text-center">
+          <div class="spinner mx-auto mb-6"></div>
+          <p class="text-lg font-bold text-gray-800">${text || 'กำลังโหลด...'}</p>
+          <p class="text-sm text-gray-500 mt-2">โปรดอย่าปิดหน้านี้</p>
+        </div>
+      `);
+    }
+
+    // ============================================================
+    // ✅ Fetch helpers
+    // ============================================================
+    async function fetchJSON(url, options){
+      const res = await fetch(url, options);
+      const txt = await res.text();
+      try { return JSON.parse(txt); } catch { return txt; }
+    }
+
+    function normalizeAllData(data){
+      if (Array.isArray(data)) return data;
+      if (data && Array.isArray(data.allData)) return data.allData;
+      if (data && Array.isArray(data.data)) return data.data;
+      if (data && Array.isArray(data.students)) return data.students;
+      return [];
+    }
+
+    function toBool(v){
+      if (typeof v === 'boolean') return v;
+      const s = String(v ?? '').trim().toLowerCase();
+      if (s === 'true' || s === '1' || s === 'yes') return true;
+      if (s === 'false' || s === '0' || s === 'no' || s === '') return false;
+      return !!v;
+    }
+
+    function getInterviewScores(student){
+      const obj = student?.interview_scores || student?.scores || {};
+      return (obj && typeof obj === 'object') ? obj : {};
+    }
+
+    function hasCommitteeScored(student, committeeUsername){
+      const scores = getInterviewScores(student);
+      return scores && committeeUsername && scores[committeeUsername] !== undefined;
+    }
+
+    // ============================================================
+    // ✅ Init + Load data
+    // ============================================================
+    async function initAPI(silent=false){
+      if (!silent) showLoadingModal('กำลังดึงข้อมูล...');
+      try{
+        const data = await fetchJSON(API_URL + '?t=' + Date.now());
+        onDataLoaded(data);
+      }catch(err){
+        onDataError(err);
+      }
+    }
+
+    function onDataLoaded(data){
+      // ✅ ปิด modal แบบถูกวิธี (ไม่ทำให้ overflow ค้าง)
+      document.querySelectorAll('.modal-overlay').forEach(m => closeModal(m));
+
+      allData = normalizeAllData(data);
+
+      studentsData = allData
+        .filter(row => !row.user_type || row.user_type === 'student')
+        .map(s => ({
+          ...s,
+          confirmed: toBool(s.confirmed),
+          is_skipped: toBool(s.is_skipped),
+        }));
+
+      committeesData = allData
+        .filter(row => row.user_type === 'committee' || row.user_type === 'admin');
+
+      // ✅ ถ้าล็อกอินอยู่แล้ว -> sync currentUser จากข้อมูลใหม่ แล้วอัปเดต UI แบบไม่กระพริบ
+      if (currentUser){
+        if (currentUser.user_type === 'student'){
+          const updated = studentsData.find(u => String(u.national_id) === String(currentUser.national_id));
+          if (updated) currentUser = { ...updated, user_type: 'student' };
+        }else{
+          const updated = committeesData.find(u => String(u.username) === String(currentUser.username));
+          if (updated) currentUser = { ...updated };
+        }
+        updateLiveUI();
+        return;
+      }
+
+      renderLoginPage();
+    }
+
+    function onDataError(error){
+      console.error(error);
+      document.querySelectorAll('.modal-overlay').forEach(m => closeModal(m));
+      alert("ไม่สามารถเชื่อมต่อฐานข้อมูลได้: " + (error?.message || error));
+      renderLoginPage();
+    }
+
+    // ============================================================
+    // ✅ SaveData -> POST {id,data} ไป Apps Script (อัปเดตชีตจริง)
+    // ============================================================
+    async function saveData(rowId, dataToUpdate){
+      const id = String(rowId || '').trim();
+      if (!id) throw new Error("Missing rowId");
+
+      // optimistic update local
+      const idx = studentsData.findIndex(d =>
+        String(d.national_id) === id || String(d.student_id) === id || String(d._id) === id
+      );
+      if (idx !== -1) studentsData[idx] = { ...studentsData[idx], ...dataToUpdate };
+
+      if (currentUser && currentUser.user_type === 'student' && String(currentUser.national_id) === id){
+        currentUser = { ...currentUser, ...dataToUpdate };
+      }
+
+      const res = await fetchJSON(API_URL, {
+        method: 'POST',
+        headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+        body: JSON.stringify({ id, data: dataToUpdate })
+      });
+
+      if (res && res.status === 'error') throw new Error(res.message || 'update error');
+      return res;
+    }
+
+    // ============================================================
+    // ✅ Auto refresh (ดึงจากชีตจริง) แบบไม่กระพริบ
+    // ============================================================
+    function startAutoRefresh(){
+      if (autoRefreshInterval) clearInterval(autoRefreshInterval);
+      autoRefreshInterval = setInterval(() => initAPI(true), AUTO_REFRESH_MS);
+    }
+    function stopAutoRefresh(){
+      if (autoRefreshInterval) clearInterval(autoRefreshInterval);
+      autoRefreshInterval = null;
+    }
+
+    // ============================================================
+    // ✅ Live UI update (ไม่ rebuild หน้า)
+    // ============================================================
+    function updateLiveUI(){
+      // Student dashboard live fields
+      const elJ = document.getElementById('liveCurrentJuniorQueue');
+      const elS = document.getElementById('liveCurrentSeniorQueue');
+
+      if (elJ || elS){
+        const juniorQueue = studentsData
+          .filter(s => s.level === 'junior' && s.confirmed && !s.is_skipped)
+          .sort((a,b) => Number(a.interview_order||999999) - Number(b.interview_order||999999));
+
+        const seniorQueue = studentsData
+          .filter(s => s.level === 'senior' && s.confirmed && !s.is_skipped)
+          .sort((a,b) => Number(a.interview_order||999999) - Number(b.interview_order||999999));
+
+        if (elJ) elJ.textContent = (juniorQueue[0]?.interview_order ?? '-');
+        if (elS) elS.textContent = (seniorQueue[0]?.interview_order ?? '-');
+      }
+
+      // My student info (order/time/status)
+      const stOrder = document.getElementById('liveMyOrder');
+      const stTime  = document.getElementById('liveMyTime');
+      const stStat  = document.getElementById('liveMyStatus');
+      if (currentUser?.user_type === 'student'){
+        if (stOrder) stOrder.textContent = currentUser.interview_order || '-';
+        if (stTime)  stTime.textContent  = currentUser.interview_time || '-';
+        if (stStat)  stStat.textContent  = currentUser.status || (currentUser.confirmed ? 'รอสัมภาษณ์' : '-');
+      }
+
+      // Committee history refresh (ถ้ามี)
+      if (document.getElementById('committee-history') && currentUser?.user_type !== 'student'){
+        renderCommitteeHistory();
+      }
+    }
+
+    // ============================================================
+    // UI Helpers
+    // ============================================================
+    const defaultConfig = {
+      system_title: 'ระบบยืนยันสิทธิ์เข้าสอบสัมภาษณ์',
+      school_name: 'ห้องเรียนอัจฉริยภาพและความสามารถพิเศษ (GATE)',
+    };
+
+    function getLevelBadge(level){
+      if (level === 'junior'){
+        return `<span class="inline-flex items-center px-4 py-1.5 rounded-full text-sm font-semibold bg-purple-100 text-purple-700 border border-purple-200 shadow-sm">ม.ต้น</span>`;
+      }else{
+        return `<span class="inline-flex items-center px-4 py-1.5 rounded-full text-sm font-semibold bg-orange-100 text-orange-700 border border-orange-200 shadow-sm">ม.ปลาย</span>`;
+      }
+    }
+
+    // ============================================================
+    // Login Page
+    // ============================================================
+    function renderLoginPage(){
+      stopAutoRefresh();
+      const config = defaultConfig; // ไม่มี sdk แล้ว
+
+      document.getElementById('app').innerHTML = `
+        <div class="min-h-full flex items-center justify-center p-4 py-12 relative overflow-hidden">
+          <div class="absolute -top-24 -left-24 w-96 h-96 bg-orange-300 rounded-full mix-blend-multiply filter blur-3xl opacity-20"></div>
+          <div class="absolute -bottom-24 -right-24 w-96 h-96 bg-purple-300 rounded-full mix-blend-multiply filter blur-3xl opacity-20"></div>
+
+          <div class="glass-effect bg-white/80 rounded-[2.5rem] shadow-soft-xl p-8 md:p-12 max-w-[500px] w-full relative z-10 backdrop-blur-xl border border-white/40">
+            <div class="text-center mb-10">
+              <div class="mx-auto mb-6 flex items-center justify-center">
+                <img src="https://img5.pic.in.th/file/secure-sv1/LOGO-SAPA-1.png" alt="LOGO SAPA" class="h-32 w-auto sm:h-20 md:h-24 lg:h-28 object-contain"/>
+              </div>
+
+              <h1 class="system-title text-3xl md:text-4xl font-extrabold text-gray-900 mb-3 tracking-tight leading-tight">
+                ${config.system_title}
+              </h1>
+              <div class="inline-block mt-3 px-4 py-1 bg-orange-50 rounded-full border border-orange-100">
+                <p class="school-name text-sm text-orange-700 font-semibold">${config.school_name}</p>
+              </div>
+            </div>
+
+            <div class="space-y-8">
+              <div class="bg-gradient-to-br from-orange-50 to-white/50 border-2 border-orange-100 rounded-3xl p-6 md:p-8 shadow-sm relative overflow-hidden">
+                <div class="absolute top-0 right-0 -mt-4 -mr-4 w-24 h-24 bg-orange-100 rounded-full opacity-50"></div>
+
+                <h2 class="text-xl font-bold text-gray-900 mb-6 flex items-center relative z-10">
+                  <span class="flex items-center justify-center w-10 h-10 bg-orange-100 text-orange-600 rounded-xl mr-3 shadow-sm">
+                    <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"></path>
+                    </svg>
+                  </span>
+                  เข้าสู่ระบบนักเรียน
+                </h2>
+
+                <div class="space-y-4 relative z-10">
+                  <label class="block text-sm font-semibold text-gray-700 mb-2 ml-1">เลขบัตรประชาชน</label>
+                  <input type="text" id="nationalId" maxlength="13" inputmode="numeric" pattern="[0-9]*"
+                    class="input-field text-lg placeholder:text-gray-400"
+                    placeholder="เลขบัตรประชาชน 13 หลัก"/>
+                  <button onclick="loginStudent()" class="btn-primary w-full text-white px-6 py-4 rounded-2xl font-bold text-lg shadow-glow-primary">
+                    เข้าสู่ระบบ
+                  </button>
+                </div>
+              </div>
+
+              <div class="text-center">
+                <button onclick="toggleCommitteeLogin()" class="text-sm text-gray-500 hover:text-orange-600 font-medium underline-offset-4 hover:underline transition-all">
+                  สำหรับกรรมการ / ผู้ดูแลระบบ
+                </button>
+              </div>
+
+              <div id="committeeLoginSection" class="hidden bg-white/50 border-2 border-gray-100 rounded-3xl p-6 shadow-sm">
+                <h2 class="text-lg font-bold text-gray-800 mb-4 flex items-center">
+                  <svg class="w-5 h-5 mr-2 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"></path>
+                  </svg>
+                  กรรมการ / Admin
+                </h2>
+
+                <div class="space-y-3">
+                  <input type="text" id="username" class="input-field text-lg placeholder:text-gray-400" placeholder="ชื่อผู้ใช้"/>
+                  <input type="password" id="password" class="input-field text-lg placeholder:text-gray-400" placeholder="รหัสผ่าน"/>
+                  <button onclick="loginCommittee()" class="btn-secondary w-full mt-2 px-6 py-3 rounded-xl font-bold">เข้าสู่ระบบ</button>
+                </div>
+              </div>
+
+              <div class="text-xs text-gray-400 text-center pt-2">
+                * ถ้ารันในเครื่องแล้ว fetch ไม่ได้ ให้เช็คว่า Apps Script Deploy เป็น “Anyone” และ URL เป็น /exec
+              </div>
+            </div>
+          </div>
+        </div>
+      `;
+    }
+
+    function toggleCommitteeLogin(){
+      document.getElementById('committeeLoginSection')?.classList.toggle('hidden');
+    }
+
+    // ============================================================
+    // Login Functions
+    // ============================================================
+    function loginStudent(){
+      const nationalId = document.getElementById('nationalId').value.trim();
+      if (nationalId.length !== 13){
+        showModal(`<div class="p-8 text-center"><p class="text-gray-800 font-bold text-xl mb-2">ข้อมูลไม่ถูกต้อง</p><p class="text-gray-600 mb-6">กรุณากรอกเลขบัตรประชาชน 13 หลัก</p><button onclick="closeModal(this.closest('.modal-overlay'))" class="btn-primary text-white px-8 py-3 rounded-xl font-medium">ตกลง</button></div>`);
+        return;
+      }
+
+      const student = studentsData.find(s => String(s.national_id).trim() === nationalId);
+      if (!student){
+        showModal(`<div class="p-8 text-center"><p class="text-gray-800 font-bold text-xl mb-2">ไม่พบข้อมูล</p><p class="text-gray-600 mb-6">ไม่พบข้อมูลของท่านในระบบ</p><button onclick="closeModal(this.closest('.modal-overlay'))" class="btn-primary text-white px-8 py-3 rounded-xl font-medium">ตกลง</button></div>`);
+        return;
+      }
+
+      currentUser = { ...student, user_type: 'student' };
+      saveSession({ type:'student', id: currentUser.national_id });
+
+      if (!currentUser.confirmed) showConfirmationDialog(currentUser);
+      else renderStudentDashboard();
+    }
+
+    function loginCommittee(){
+      const username = document.getElementById('username').value.trim();
+      const password = document.getElementById('password').value.trim();
+
+      const user = committeesData.find(c => String(c.username) === username && String(c.password) === password);
+      if (!user){ alert("ชื่อผู้ใช้หรือรหัสผ่านไม่ถูกต้อง"); return; }
+
+      currentUser = user;
+      saveSession({ type:'committee', username, password });
+
+      if (user.user_type === 'admin') renderAdminDashboard();
+      else renderCommitteeDashboard();
+    }
+
+    // ============================================================
+    // Student Confirmation Dialog
+    // ============================================================
+    function showConfirmationDialog(student){
+      showModal(`
+        <div class="p-6 md:p-10">
+          <div class="text-center mb-8">
+            <div class="w-20 h-20 bg-green-100 rounded-[2rem] mx-auto mb-4 flex items-center justify-center shadow-sm rotate-3">
+              <svg class="w-10 h-10 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
+            </div>
+            <h2 class="text-3xl font-extrabold text-gray-900 mb-2">ยินดีด้วย! คุณมีสิทธิ์สอบสัมภาษณ์</h2>
+            <p class="text-lg text-gray-600 font-medium">โครงการห้องเรียน GATE</p>
+          </div>
+
+          <div class="bg-white border-2 border-gray-100 rounded-[2rem] p-6 mb-8 shadow-sm relative overflow-hidden">
+            <div class="absolute top-0 right-0 -mt-4 -mr-4 w-32 h-32 bg-orange-50 rounded-full opacity-50"></div>
+
+            <div class="flex items-center gap-4 mb-4 relative z-10">
+              ${getLevelBadge(student.level)}
+              <h3 class="text-xl font-bold text-gray-900">${student.name}</h3>
+            </div>
+
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-6 relative z-10">
+              <div class="bg-gray-50 p-4 rounded-2xl">
+                <p class="text-sm text-gray-500 font-medium mb-1">เลขประจำตัวสอบ</p>
+                <p class="font-bold text-gray-800 text-lg">${student.exam_number || '-'}</p>
+              </div>
+              <div class="bg-gray-50 p-4 rounded-2xl">
+                <p class="text-sm text-gray-500 font-medium mb-1">โรงเรียนปัจจุบัน</p>
+                <p class="font-medium text-gray-800">${student.current_school || '-'}</p>
+              </div>
+            </div>
+
+            <div class="mt-6 pt-6 border-t-2 border-gray-100 relative z-10">
+              <p class="text-lg font-bold text-gray-900 mb-4 flex items-center">
+                <svg class="w-5 h-5 mr-2 text-orange-500" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"/></svg>
+                คะแนนสอบข้อเขียน
+              </p>
+
+              <div class="grid grid-cols-3 gap-3 text-center">
+                <div class="bg-blue-50 p-3 rounded-2xl border border-blue-100">
+                  <span class="block text-sm text-blue-600 font-semibold mb-1">คณิตศาสตร์</span>
+                  <span class="font-extrabold text-2xl text-blue-800">${student.math_score || 0}</span><span class="text-sm text-blue-400">/30</span>
+                </div>
+                <div class="bg-purple-50 p-3 rounded-2xl border border-purple-100">
+                  <span class="block text-sm text-purple-600 font-semibold mb-1">วิทยาศาสตร์</span>
+                  <span class="font-extrabold text-2xl text-purple-800">${student.science_score || 0}</span><span class="text-sm text-purple-400">/40</span>
+                </div>
+                <div class="bg-pink-50 p-3 rounded-2xl border border-pink-100">
+                  <span class="block text-sm text-pink-600 font-semibold mb-1">ภาษาอังกฤษ</span>
+                  <span class="font-extrabold text-2xl text-pink-800">${student.english_score || 0}</span><span class="text-sm text-pink-400">/40</span>
+                </div>
+              </div>
+
+              <div class="bg-gradient-to-r from-orange-400 to-orange-600 p-4 rounded-2xl mt-4 text-white flex justify-between items-center shadow-lg shadow-orange-500/20">
+                <span class="text-lg font-bold">คะแนนรวมทั้งหมด</span>
+                <span class="font-extrabold text-4xl">${student.total_score || 0} <span class="text-lg font-medium opacity-80">/ 110</span></span>
+              </div>
+            </div>
+          </div>
+
+          <button onclick="showAbilityForm()" class="btn-primary w-full text-white px-6 py-4 rounded-2xl font-bold text-xl shadow-glow-primary flex items-center justify-center">
+            ยืนยันสิทธิ์สอบสัมภาษณ์
+            <svg class="w-6 h-6 ml-2" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 7l5 5m0 0l-5 5m5-5H6"/></svg>
+          </button>
+        </div>
+      `);
+    }
+
+    // ============================================================
+    // Ability Form + Upload Audio
+    // ============================================================
+    function showAbilityForm(){
+      document.querySelectorAll('.modal-overlay').forEach(m => closeModal(m));
+      uploadedAudio = null;
+
+      showModal(`
+        <div class="p-6 md:p-10">
+          <h2 class="text-3xl font-extrabold text-gray-900 mb-6">กรอกข้อมูลเพิ่มเติม</h2>
+
+          <form id="abilityForm" class="space-y-8">
+            <div>
+              <label class="block text-lg font-bold text-gray-800 mb-3">
+                ความสามารถพิเศษที่โดดเด่น <span class="text-orange-500">*</span>
+              </label>
+              <textarea id="ability" required rows="5"
+                class="input-field resize-none text-lg placeholder:text-gray-400"
+                placeholder="เช่น ด้านวิชาการ (คณิต/วิทย์), ด้านดนตรี, กีฬา, ศิลปะ หรือผลงานอื่นๆ ที่ภูมิใจ..."></textarea>
+            </div>
+
+            <div>
+              <label class="block text-lg font-bold text-gray-800 mb-3">ไฟล์เสียงแนะนำตัว (ถ้ามี)</label>
+              <div class="border-3 border-dashed border-gray-200 rounded-[2rem] p-8 text-center hover:border-orange-400 hover:bg-orange-50 transition-all cursor-pointer group"
+                onclick="document.getElementById('audioFile').click()">
+                <div class="w-16 h-16 bg-orange-100 text-orange-500 rounded-full flex items-center justify-center mx-auto mb-4 group-hover:scale-110 transition-transform">
+                  <svg class="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12"></path></svg>
+                </div>
+                <p class="text-lg font-medium text-gray-700 mb-1">คลิกเพื่อเลือกไฟล์เสียง</p>
+                <p class="text-sm text-gray-500">รองรับ MP3, WAV, M4A (ไม่เกิน 10MB)</p>
+              </div>
+              <input type="file" id="audioFile" accept="audio/*" class="hidden" onchange="handleFileUpload(this)">
+              <div id="uploadStatus" class="mt-4"></div>
+            </div>
+
+            <div class="flex gap-4 pt-4">
+              <button type="button" onclick="cancelAbilityForm()" class="btn-secondary flex-1 px-6 py-4 rounded-2xl font-bold text-lg">ยกเลิก</button>
+              <button type="submit" class="btn-primary flex-1 text-white px-6 py-4 rounded-2xl font-bold text-lg shadow-glow-primary">ยืนยันข้อมูล</button>
+            </div>
+          </form>
+        </div>
+      `);
+
+      document.getElementById('abilityForm').addEventListener('submit', (e) => {
+        e.preventDefault();
+        submitAbilityForm();
+      });
+    }
+
+    function handleFileUpload(input){
+      if (!input.files || !input.files[0]) return;
+      const file = input.files[0];
+
+      const statusDiv = document.getElementById('uploadStatus');
+      statusDiv.innerHTML = `<div class="bg-blue-50 border border-blue-100 rounded-2xl p-4 flex items-center gap-4"><div class="spinner w-6 h-6 border-2"></div><span class="text-blue-800 font-medium">กำลังอ่านไฟล์ ${file.name}...</span></div>`;
+
+      if (file.size > 10 * 1024 * 1024){
+        statusDiv.innerHTML = `<div class="bg-red-50 border border-red-100 rounded-2xl p-4"><p class="font-bold text-red-700">ไฟล์ใหญ่เกิน 10MB</p></div>`;
+        input.value = '';
+        uploadedAudio = null;
+        return;
+      }
+
+      const reader = new FileReader();
+      reader.onload = () => {
+        const base64 = String(reader.result).split(',')[1];
+        uploadedAudio = {
+          fileData: base64,
+          mimeType: file.type || "application/octet-stream",
+          fileName: file.name || "audio"
+        };
+        statusDiv.innerHTML = `<div class="bg-green-50 border border-green-100 rounded-2xl p-4 flex items-center gap-4">
+          <div class="w-8 h-8 bg-green-100 rounded-full flex items-center justify-center flex-shrink-0">
+            <svg class="w-5 h-5 text-green-600" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/></svg>
+          </div>
+          <div class="flex-1 overflow-hidden">
+            <p class="font-bold text-green-800">พร้อมอัปโหลด</p>
+            <p class="text-sm text-green-600 truncate">${file.name}</p>
+          </div>
+        </div>`;
+      };
+      reader.onerror = () => {
+        statusDiv.innerHTML = `<div class="bg-red-50 border border-red-100 rounded-2xl p-4"><p class="font-bold text-red-700">อ่านไฟล์ไม่สำเร็จ</p></div>`;
+        uploadedAudio = null;
+      };
+      reader.readAsDataURL(file);
+    }
+
+    function cancelAbilityForm(){
+      document.querySelectorAll('.modal-overlay').forEach(m => closeModal(m));
+      showConfirmationDialog(currentUser);
+    }
+
+    async function submitAbilityForm(){
+      const ability = document.getElementById('ability').value.trim();
+      if (!ability){
+        showModal(`<div class="p-8 text-center"><p class="text-red-600 font-bold text-xl mb-4">กรุณากรอกความสามารถพิเศษ</p><button onclick="closeModal(this.closest('.modal-overlay'))" class="btn-primary text-white px-8 py-3 rounded-xl font-medium">ตกลง</button></div>`);
+        return;
+      }
+
+      const loadingModal = showLoadingModal('กำลังบันทึกข้อมูล...');
+
+      const patch = { ability, confirmed: true, status: 'รอสัมภาษณ์' };
+      if (uploadedAudio){
+        patch.fileData = uploadedAudio.fileData;
+        patch.mimeType = uploadedAudio.mimeType;
+        patch.fileName = uploadedAudio.fileName;
+      }
+
+      try{
+        await saveData(currentUser.national_id, patch);
+
+        currentUser.ability = ability;
+        currentUser.confirmed = true;
+        currentUser.status = 'รอสัมภาษณ์';
+
+        closeModal(loadingModal);
+        document.querySelectorAll('.modal-overlay').forEach(m => closeModal(m));
+
+        showModal(`
+          <div class="p-10 text-center">
+            <div class="mb-6 flex justify-center">
+              <svg class="checkmark" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 52 52">
+                <circle class="checkmark-circle" cx="26" cy="26" r="25" fill="none"/>
+                <path class="checkmark-check" fill="none" d="M14.1 27.2l7.1 7.2 16.7-16.8"/>
+              </svg>
+            </div>
+            <h3 class="text-3xl font-extrabold text-gray-900 mb-4">ยืนยันสิทธิ์สำเร็จ!</h3>
+            <p class="text-gray-600 text-lg mb-8">เตรียมตัวให้พร้อมสำหรับการสัมภาษณ์</p>
+
+            <div class="bg-gradient-to-r from-orange-50 to-white border-2 border-orange-100 rounded-[2rem] p-8 mb-8 text-center shadow-sm">
+              <p class="text-gray-600 text-lg mb-2">ลำดับสัมภาษณ์ของคุณ</p>
+              <p class="text-6xl font-extrabold text-gradient-primary mb-4">${currentUser.interview_order || '-'}</p>
+              <div class="inline-block bg-orange-100 text-orange-700 px-6 py-2 rounded-full font-bold text-lg">
+                เวลาประมาณ ${currentUser.interview_time || '-'} น.
+              </div>
+            </div>
+
+            <button onclick="confirmAndGoToDashboard()" class="btn-primary text-white px-12 py-4 rounded-2xl font-bold text-xl shadow-glow-primary">เข้าสู่แดชบอร์ด</button>
+          </div>
+        `);
+      }catch(err){
+        closeModal(loadingModal);
+        showModal(`<div class="text-center py-10">
+          <p class="text-xl font-extrabold text-red-600 mb-2">บันทึกไม่สำเร็จ</p>
+          <p class="text-gray-600 mb-6">${err?.message || err}</p>
+          <button class="btn-primary text-white px-8 py-3 rounded-xl font-bold" onclick="closeModal(this.closest('.modal-overlay'))">ตกลง</button>
+        </div>`);
+      }
+    }
+
+    function confirmAndGoToDashboard(){
+      document.querySelectorAll('.modal-overlay').forEach(m => closeModal(m));
+      renderStudentDashboard();
+    }
+
+    // ============================================================
+    // Student Dashboard (ใส่ id ให้ updateLiveUI)
+    // ============================================================
+    function renderStudentDashboard(){
+      startAutoRefresh();
+
+      const juniorQueue = studentsData.filter(s => s.level === 'junior' && s.confirmed && !s.is_skipped)
+        .sort((a,b) => Number(a.interview_order||999999) - Number(b.interview_order||999999));
+      const seniorQueue = studentsData.filter(s => s.level === 'senior' && s.confirmed && !s.is_skipped)
+        .sort((a,b) => Number(a.interview_order||999999) - Number(b.interview_order||999999));
+
+      const currentJuniorQueue = juniorQueue.length ? juniorQueue[0].interview_order : '-';
+      const currentSeniorQueue = seniorQueue.length ? seniorQueue[0].interview_order : '-';
+
+      document.getElementById('app').innerHTML = `
+        <div class="min-h-full p-4 md:p-8 pb-20">
+          <div class="max-w-5xl mx-auto space-y-8">
+
+            <div class="glass-effect bg-white/80 rounded-[2.5rem] shadow-soft-xl p-6 md:p-8 flex flex-col md:flex-row items-center justify-between gap-6 relative overflow-hidden">
+              <div class="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-orange-400 to-purple-500"></div>
+              <div class="flex items-center gap-6 w-full md:w-auto">
+                <div class="flex items-center justify-center shrink-0 rotate-3">
+                  <img src="https://img5.pic.in.th/file/secure-sv1/LOGO-SAPA-1.png" alt="LOGO" class="h-24 w-auto sm:h-14 md:h-16 lg:h-20 object-contain"/>
+                </div>
+                <div>
+                  <h1 class="text-3xl font-extrabold text-gray-900 mb-2">${currentUser.name}</h1>
+                  <div class="flex items-center gap-3">
+                    ${getLevelBadge(currentUser.level)}
+                    <span class="text-gray-500 font-medium">เลขที่นั่งสอบ: ${currentUser.exam_number || '-'}</span>
+                  </div>
+                </div>
+              </div>
+              <button onclick="logout()" class="btn-secondary px-6 py-3 rounded-xl text-sm font-bold shrink-0">ออกจากระบบ</button>
+            </div>
+
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+              <div class="glass-effect bg-white/80 rounded-[2.5rem] shadow-soft-xl p-8 relative overflow-hidden group hover:shadow-glow-secondary transition-all">
+                <div class="absolute -right-10 -top-10 w-40 h-40 bg-purple-100 rounded-full opacity-50"></div>
+                <h2 class="text-xl font-bold text-purple-800 mb-4 flex items-center relative z-10"><span class="w-3 h-3 bg-purple-500 rounded-full mr-2"></span>คิวปัจจุบัน ม.ต้น</h2>
+                <div class="text-center relative z-10">
+                  <p class="text-7xl font-extrabold text-gradient-secondary mb-2"><span id="liveCurrentJuniorQueue">${currentJuniorQueue}</span></p>
+                  <p class="text-purple-600 font-medium inline-block bg-purple-100 px-4 py-1 rounded-full animate-pulse">กำลังสัมภาษณ์</p>
+                </div>
+              </div>
+
+              <div class="glass-effect bg-white/80 rounded-[2.5rem] shadow-soft-xl p-8 relative overflow-hidden group hover:shadow-glow-primary transition-all">
+                <div class="absolute -right-10 -top-10 w-40 h-40 bg-orange-100 rounded-full opacity-50"></div>
+                <h2 class="text-xl font-bold text-orange-800 mb-4 flex items-center relative z-10"><span class="w-3 h-3 bg-orange-500 rounded-full mr-2"></span>คิวปัจจุบัน ม.ปลาย</h2>
+                <div class="text-center relative z-10">
+                  <p class="text-7xl font-extrabold text-gradient-primary mb-2"><span id="liveCurrentSeniorQueue">${currentSeniorQueue}</span></p>
+                  <p class="text-orange-600 font-medium inline-block bg-orange-100 px-4 py-1 rounded-full animate-pulse">กำลังสัมภาษณ์</p>
+                </div>
+              </div>
+            </div>
+
+            <div class="glass-effect bg-white/80 rounded-[2.5rem] shadow-soft-xl p-8">
+              <div class="flex items-center justify-between mb-6">
+                <h2 class="text-2xl font-bold text-gray-900 flex items-center">
+                  <svg class="w-7 h-7 mr-3 text-orange-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5.121 17.804A13.937 13.937 0 0112 16c2.5 0 4.847.655 6.879 1.804M15 10a3 3 0 11-6 0 3 3 0 016 0zm6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
+                  ข้อมูลของคุณ
+                </h2>
+                <button onclick="showStudentInfo()" class="text-orange-600 hover:text-orange-700 font-bold underline-offset-4 hover:underline flex items-center">
+                  ดูรายละเอียด <svg class="w-5 h-5 ml-1" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/></svg>
+                </button>
+              </div>
+
+              <div class="bg-gradient-to-r from-orange-50 to-white border-2 border-orange-100 rounded-3xl p-6 flex flex-col md:flex-row items-center justify-between gap-6">
+                <div class="flex items-center gap-6">
+                  <div class="w-24 h-24 bg-white rounded-2xl flex items-center justify-center shadow-sm border-2 border-orange-100">
+                    <span id="liveMyOrder" class="text-5xl font-extrabold text-orange-500">${currentUser.interview_order || '-'}</span>
+                  </div>
+                  <div>
+                    <p class="text-lg font-bold text-gray-900 mb-1">ลำดับคิวของคุณ</p>
+                    <p class="text-orange-600 font-medium bg-orange-100 px-3 py-1 rounded-lg inline-block">
+                      เวลาประมาณ <span id="liveMyTime">${currentUser.interview_time || '-'}</span>
+                    </p>
+                  </div>
+                </div>
+
+                <div class="text-right md:text-left">
+                  <p class="text-gray-500 font-medium mb-1">สถานะปัจจุบัน</p>
+                  <span class="inline-flex items-center px-5 py-2 rounded-full text-lg font-bold bg-green-100 text-green-700 border-2 border-green-200">
+                    <span class="w-3 h-3 bg-green-500 rounded-full mr-2 animate-pulse"></span>
+                    <span id="liveMyStatus">${currentUser.status || (currentUser.confirmed ? 'รอสัมภาษณ์' : '-')}</span>
+                  </span>
+                </div>
+              </div>
+            </div>
+
+          </div>
+        </div>
+      `;
+    }
+
+    function showStudentInfo(){
+      const student = currentUser;
+      showModal(`
+        <div class="p-6 md:p-10">
+          <div class="flex items-center justify-between mb-8">
+            <h2 class="text-3xl font-extrabold text-gray-900">ข้อมูลส่วนตัว</h2>
+            ${getLevelBadge(student.level)}
+          </div>
+
+          <div class="bg-white border-2 border-gray-100 rounded-[2rem] p-6 mb-8 shadow-sm">
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-6 text-lg">
+              <div><p class="text-gray-500 font-medium mb-1">ชื่อ-สกุล</p><p class="font-bold text-gray-900 text-xl">${student.name}</p></div>
+              <div><p class="text-gray-500 font-medium mb-1">เลขประจำตัวสอบ</p><p class="font-bold text-gray-900 text-xl">${student.exam_number || '-'}</p></div>
+              <div class="md:col-span-2"><p class="text-gray-500 font-medium mb-1">โรงเรียนปัจจุบัน</p><p class="font-bold text-gray-900 text-xl">${student.current_school || '-'}</p></div>
+            </div>
+          </div>
+
+          <h3 class="text-xl font-bold text-gray-900 mb-4 flex items-center">
+            <svg class="w-6 h-6 mr-2 text-orange-500" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"/></svg>
+            คะแนนสอบข้อเขียน
+          </h3>
+
+          <div class="bg-gradient-to-br from-gray-50 to-white border-2 border-gray-100 rounded-[2rem] p-6 mb-8">
+            <div class="grid grid-cols-3 gap-4 text-center mb-6">
+              <div class="bg-white p-4 rounded-2xl shadow-sm border border-gray-100"><span class="block text-blue-600 font-bold mb-1">คณิตศาสตร์</span><span class="font-extrabold text-2xl">${student.math_score || 0}</span></div>
+              <div class="bg-white p-4 rounded-2xl shadow-sm border border-gray-100"><span class="block text-purple-600 font-bold mb-1">วิทยาศาสตร์</span><span class="font-extrabold text-2xl">${student.science_score || 0}</span></div>
+              <div class="bg-white p-4 rounded-2xl shadow-sm border border-gray-100"><span class="block text-pink-600 font-bold mb-1">ภาษาอังกฤษ</span><span class="font-extrabold text-2xl">${student.english_score || 0}</span></div>
+            </div>
+            <div class="bg-orange-500 text-white p-5 rounded-2xl flex justify-between items-center shadow-lg shadow-orange-500/20">
+              <span class="text-lg font-bold">คะแนนรวม</span>
+              <span class="font-extrabold text-4xl">${student.total_score || 0} <span class="text-xl opacity-80">/ 110</span></span>
+            </div>
+          </div>
+
+          ${student.ability ? `
+            <h3 class="text-xl font-bold text-gray-900 mb-4 flex items-center">
+              <svg class="w-6 h-6 mr-2 text-purple-500" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 3v4M3 5h4M6 17v4m-2-2h4m5-16l2.286 6.857L21 12l-5.714 2.143L13 21l-2.286-6.857L5 12l5.714-2.143L13 3z"/></svg>
+              ความสามารถพิเศษ
+            </h3>
+            <div class="bg-purple-50 border-2 border-purple-100 rounded-[2rem] p-6 text-lg font-medium text-purple-900 mb-8">
+              "${student.ability}"
+            </div>
+          ` : ''}
+
+          ${student.audio_file ? `
+            <a href="${student.audio_file}" target="_blank" class="btn-secondary w-full py-3 rounded-xl font-bold flex items-center justify-center mb-4">
+              <svg class="w-6 h-6 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M14.752 11.168l-3.197-2.132A1 1 0 0010 9.87v4.263a1 1 0 001.555.832l3.197-2.132a1 1 0 000-1.664z"/><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+              เปิดไฟล์เสียงแนะนำตัว
+            </a>
+          ` : ''}
+
+          <button onclick="closeModal(this.closest('.modal-overlay'))" class="btn-primary w-full px-6 py-4 rounded-2xl font-bold text-xl text-white shadow-glow-primary">ปิดหน้าต่าง</button>
+        </div>
+      `);
+    }
+
+    // ============================================================
+    // Committee Dashboard
+    // ============================================================
+    function renderCommitteeDashboard(){
+      startAutoRefresh();
+
+      const myStudents = studentsData
+        .filter(s => s.level === currentUser.level && s.confirmed && !s.is_skipped)
+        .sort((a,b) => Number(a.interview_order||999999) - Number(b.interview_order||999999));
+
+      const currentStudent = myStudents.length ? myStudents[0] : null;
+
+      document.getElementById('app').innerHTML = `
+        <div class="min-h-full p-4 md:p-8 pb-20 bg-gray-50">
+          <div class="max-w-6xl mx-auto space-y-8">
+
+            <div class="bg-white rounded-[2rem] shadow-sm p-6 flex justify-between items-center">
+              <div>
+                <h1 class="text-2xl font-bold text-gray-800">ยินดีต้อนรับ, ${currentUser.name || currentUser.username}</h1>
+                <p class="text-gray-500">กรรมการคุมสอบ: ${currentUser.level === 'junior' ? 'ม.ต้น' : 'ม.ปลาย'}</p>
+              </div>
+              <button onclick="logout()" class="text-red-500 font-bold border border-red-200 px-4 py-2 rounded-xl hover:bg-red-50">ออกจากระบบ</button>
+            </div>
+
+            ${currentStudent ? `
+              <div class="bg-white border-l-8 border-orange-500 rounded-[2.5rem] shadow-lg p-8 relative overflow-hidden">
+                <div class="flex flex-col md:flex-row items-center gap-8">
+
+                  <div class="text-center shrink-0">
+                    <p class="text-gray-500 font-bold mb-2 uppercase tracking-wide">คิวปัจจุบัน</p>
+                    <div class="w-32 h-32 bg-orange-500 text-white rounded-3xl flex items-center justify-center text-6xl font-extrabold shadow-orange-200 shadow-xl">
+                      ${currentStudent.interview_order || '-'}
+                    </div>
+                  </div>
+
+                  <div class="flex-1 text-center md:text-left">
+                    <h2 class="text-4xl font-extrabold text-gray-900 mb-2">${currentStudent.name}</h2>
+                    <p class="text-xl text-gray-600 mb-4">${currentStudent.current_school || '-'} (เลขที่นั่งสอบ: ${currentStudent.exam_number || '-'})</p>
+
+                    <div class="flex flex-wrap justify-center md:justify-start gap-3">
+                      <span class="px-4 py-2 bg-blue-100 text-blue-700 rounded-lg font-bold">คณิต: ${currentStudent.math_score || 0}</span>
+                      <span class="px-4 py-2 bg-purple-100 text-purple-700 rounded-lg font-bold">วิทย์: ${currentStudent.science_score || 0}</span>
+                      <span class="px-4 py-2 bg-pink-100 text-pink-700 rounded-lg font-bold">อังกฤษ: ${currentStudent.english_score || 0}</span>
+                      <span class="px-4 py-2 bg-gray-800 text-white rounded-lg font-bold">รวมข้อเขียน: ${currentStudent.total_score || 0}</span>
+                    </div>
+                  </div>
+
+                  <div class="shrink-0">
+                    <button onclick="openScoreForm('${currentStudent.national_id}')" class="btn-primary text-white px-8 py-4 rounded-2xl font-bold text-xl shadow-glow-primary hover:scale-105 transition-transform flex items-center">
+                      <svg class="w-6 h-6 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"/></svg>
+                      ให้คะแนน
+                    </button>
+                  </div>
+                </div>
+              </div>
+
+              <div class="mt-8">
+                <h3 class="text-xl font-bold text-gray-700 mb-4">ประวัติการบันทึกคะแนนของคุณ</h3>
+                <div id="committee-history" class="bg-white rounded-2xl p-6 shadow-sm"></div>
+              </div>
+            ` : `
+              <div class="text-center py-20">
+                <div class="w-24 h-24 bg-gray-100 rounded-full flex items-center justify-center mx-auto mb-4 text-4xl">😴</div>
+                <h2 class="text-2xl font-bold text-gray-400">ยังไม่มีคิวสัมภาษณ์ หรือ หมดคิวแล้ว</h2>
+                <p class="text-gray-400">กรุณารอ Admin เรียกคิวถัดไป...</p>
+              </div>
+            `}
+          </div>
+        </div>
+      `;
+
+      renderCommitteeHistory();
+    }
+
+    function renderCommitteeHistory(){
+      const box = document.getElementById('committee-history');
+      if (!box) return;
+
+      const my = studentsData
+        .filter(s => s.confirmed && hasCommitteeScored(s, currentUser.username))
+        .sort((a,b) => Number(a.interview_order||999999) - Number(b.interview_order||999999));
+
+      if (!my.length){
+        box.innerHTML = `<p class="text-gray-400 text-center text-sm">ยังไม่มีประวัติการให้คะแนน</p>`;
+        return;
+      }
+
+      box.innerHTML = `
+        <div class="space-y-3">
+          ${my.map(s => {
+            const scores = getInterviewScores(s)[currentUser.username];
+            return `
+              <div class="border border-gray-100 rounded-xl p-4 flex items-center justify-between">
+                <div>
+                  <p class="font-bold text-gray-800">${s.name} <span class="text-gray-400 font-normal">(#${s.interview_order || '-'})</span></p>
+                  <p class="text-sm text-gray-500">${s.current_school || '-'}</p>
+                </div>
+                <div class="text-right">
+                  <p class="text-sm text-gray-500">คะแนนรวม</p>
+                  <p class="font-extrabold text-lg text-orange-600">${scores?.total ?? '-'}</p>
+                </div>
+              </div>
+            `;
+          }).join('')}
+        </div>
+      `;
+    }
+
+    // ============================================================
+    // Score Form Modal
+    // ============================================================
+    function openScoreForm(studentId){
+      const student = studentsData.find(s => String(s.national_id) === String(studentId));
+      if (!student) return;
+
+      if (hasCommitteeScored(student, currentUser.username)){
+        showModal(`<div class="p-8 text-center"><p class="text-gray-800 font-bold text-xl mb-2">บันทึกคะแนนแล้ว</p><p class="text-gray-600 mb-6">คุณได้บันทึกคะแนนนักเรียนคนนี้แล้ว ไม่สามารถแก้ไขได้</p><button onclick="closeModal(this.closest('.modal-overlay'))" class="btn-primary text-white px-8 py-3 rounded-xl font-medium">ตกลง</button></div>`);
+        return;
+      }
+
+      showModal(`
+        <div class="p-6 md:p-10 scroll-container">
+          <div class="flex items-center justify-between mb-6 sticky top-0 bg-white/90 backdrop-blur-md py-4 z-20 border-b border-gray-100">
+            <div>
+              <h2 class="text-3xl font-extrabold text-gray-900 leading-tight">${student.name}</h2>
+              <div class="flex items-center gap-3 mt-2">${getLevelBadge(student.level)} <span class="text-gray-500 font-medium">#${student.exam_number || '-'}</span></div>
+            </div>
+            <div class="text-right">
+              <p class="text-sm font-bold text-gray-500 uppercase tracking-wider mb-1">ลำดับคิวที่</p>
+              <div class="w-16 h-16 bg-orange-100 text-orange-600 rounded-2xl flex items-center justify-center shadow-sm font-extrabold text-4xl">${student.interview_order || '-'}</div>
+            </div>
+          </div>
+
+          <div class="bg-gray-50 border-2 border-gray-100 rounded-[2rem] p-6 mb-8">
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-4 text-lg mb-4">
+              <div><p class="text-gray-500 font-medium text-sm">โรงเรียน</p><p class="font-bold text-gray-900">${student.current_school || '-'}</p></div>
+              ${student.ability ? `<div><p class="text-gray-500 font-medium text-sm">ความสามารถพิเศษ</p><p class="font-bold text-purple-700">${student.ability}</p></div>` : ''}
+            </div>
+            <div class="bg-white rounded-2xl p-4 border border-gray-100 flex flex-wrap items-center justify-around gap-4">
+              <div class="text-center"><span class="block text-sm text-blue-500 font-bold">คณิต</span><span class="text-xl font-extrabold text-gray-800">${student.math_score || 0}</span></div>
+              <div class="text-center"><span class="block text-sm text-purple-500 font-bold">วิทย์</span><span class="text-xl font-extrabold text-gray-800">${student.science_score || 0}</span></div>
+              <div class="text-center"><span class="block text-sm text-pink-500 font-bold">อังกฤษ</span><span class="text-xl font-extrabold text-gray-800">${student.english_score || 0}</span></div>
+              <div class="bg-orange-100 px-6 py-2 rounded-xl text-center"><span class="block text-sm text-orange-600 font-bold">รวมข้อเขียน</span><span class="text-2xl font-extrabold text-orange-700">${student.total_score || 0}</span></div>
+            </div>
+            ${student.audio_file ? `<div class="mt-4 pt-4 border-t border-gray-200">
+              <a href="${student.audio_file}" target="_blank" class="btn-secondary w-full py-3 rounded-xl font-bold flex items-center justify-center">
+                <svg class="w-6 h-6 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M14.752 11.168l-3.197-2.132A1 1 0 0010 9.87v4.263a1 1 0 001.555.832l3.197-2.132a1 1 0 000-1.664z"/><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+                เปิดไฟล์เสียงแนะนำตัว
+              </a>
+            </div>` : ''}
+          </div>
+
+          <form id="scoreForm" class="space-y-6">
+            <div class="bg-blue-50/50 border-l-4 border-blue-500 p-4 rounded-r-xl flex items-start">
+              <svg class="w-6 h-6 text-blue-500 mr-3 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+              <p class="text-blue-800 font-medium">เมื่อบันทึกคะแนนแล้ว จะไม่สามารถแก้ไขได้ กรุณาตรวจสอบให้ถูกต้อง</p>
+            </div>
+
+            <div class="space-y-6">
+              ${[
+                {id:1, title:'1. การนำเสนอตัวเอง (20 คะแนน)', options:[20,15,10,5]},
+                {id:2, title:'2. บุคลิกภาพและเจตคติที่ดี (20 คะแนน)', options:[20,15,10,5]},
+                {id:3, title:'3. ความถนัดในความสามารถของตนเอง (30 คะแนน)', options:[30,25,20,15,10]},
+                {id:4, title:'4. การแสดงทัศนคติต่อปัญหาเฉพาะหน้า (30 คะแนน)', options:[30,25,20,15,10]}
+              ].map(c => `
+                <div class="bg-white border-2 border-gray-100 p-6 rounded-[2rem] shadow-sm hover:border-orange-200 transition-all">
+                  <label class="block text-lg font-bold text-gray-900 mb-4">${c.title}</label>
+                  <div class="grid grid-cols-2 md:grid-cols-4 gap-3">
+                    ${c.options.map(opt => `
+                      <label class="cursor-pointer">
+                        <input type="radio" name="score${c.id}" value="${opt}" class="peer hidden" required>
+                        <div class="peer-checked:bg-orange-500 peer-checked:text-white peer-checked:border-orange-500 peer-checked:shadow-glow-primary bg-white border-2 border-gray-200 text-gray-700 font-bold text-center py-3 rounded-xl transition-all hover:bg-orange-50">
+                          ${opt} คะแนน
+                        </div>
+                      </label>
+                    `).join('')}
+                  </div>
+                </div>
+              `).join('')}
+            </div>
+
+            <div class="flex gap-4 pt-6 border-t-2 border-gray-100 sticky bottom-0 bg-white/90 backdrop-blur-md py-4 z-20">
+              <button type="button" onclick="closeModal(this.closest('.modal-overlay'))" class="btn-secondary flex-1 px-6 py-4 rounded-2xl font-bold text-lg">ยกเลิก</button>
+              <button type="submit" class="btn-primary flex-1 text-white px-6 py-4 rounded-2xl font-bold text-lg shadow-glow-primary">บันทึกคะแนน</button>
+            </div>
+          </form>
+        </div>
+      `);
+
+      document.getElementById('scoreForm').addEventListener('submit', (e) => {
+        e.preventDefault();
+        submitScore(studentId);
+      });
+    }
+
+    async function submitScore(studentId){
+      const s1 = document.querySelector('input[name="score1"]:checked')?.value;
+      const s2 = document.querySelector('input[name="score2"]:checked')?.value;
+      const s3 = document.querySelector('input[name="score3"]:checked')?.value;
+      const s4 = document.querySelector('input[name="score4"]:checked')?.value;
+
+      if (!s1 || !s2 || !s3 || !s4){ alert("กรุณาให้คะแนนให้ครบทุกข้อ"); return; }
+
+      // ปิด modal ให้คะแนนก่อน
+      const scoreModal = document.querySelector('.modal-overlay');
+      if (scoreModal) closeModal(scoreModal);
+
+      // ✅ Loading ต้องขึ้นแน่
+      const loadingModal = showLoadingModal('กำลังบันทึกคะแนน...');
+
+      try{
+        const payload = {
+          action: 'submitScore',
+          studentId: String(studentId),
+          committeeName: currentUser.username,
+          totalScore: (parseInt(s1,10)+parseInt(s2,10)+parseInt(s3,10)+parseInt(s4,10)),
+          score1: parseInt(s1,10),
+          score2: parseInt(s2,10),
+          score3: parseInt(s3,10),
+          score4: parseInt(s4,10),
+        };
+
+        const res = await fetchJSON(API_URL, {
+          method: 'POST',
+          headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+          body: JSON.stringify(payload)
+        });
+
+        closeModal(loadingModal);
+
+        if (res?.status === 'error'){
+          showModal(`<div class="text-center py-10">
+            <p class="text-xl font-extrabold text-red-600 mb-2">บันทึกไม่สำเร็จ</p>
+            <p class="text-gray-600 mb-6">${res.message || 'กรุณาลองใหม่'}</p>
+            <button class="btn-primary text-white px-8 py-3 rounded-xl font-bold" onclick="closeModal(this.closest('.modal-overlay'))">ตกลง</button>
+          </div>`);
+          return;
+        }
+
+        showModal(`<div class="text-center py-10">
+          <p class="text-2xl font-extrabold text-green-600 mb-2">บันทึกคะแนนสำเร็จ</p>
+          <p class="text-gray-600 mb-6">ระบบจะอัปเดตข้อมูลอัตโนมัติ</p>
+          <button class="btn-primary text-white px-8 py-3 rounded-xl font-bold" onclick="closeModal(this.closest('.modal-overlay'))">ปิด</button>
+        </div>`);
+
+        // ดึงข้อมูลใหม่แบบไม่กระพริบ
+        initAPI(true);
+
+      }catch(err){
+        closeModal(loadingModal);
+        showModal(`<div class="text-center py-10">
+          <p class="text-xl font-extrabold text-red-600 mb-2">เกิดข้อผิดพลาด</p>
+          <p class="text-gray-600 mb-6">${err?.message || err}</p>
+          <button class="btn-primary text-white px-8 py-3 rounded-xl font-bold" onclick="closeModal(this.closest('.modal-overlay'))">ตกลง</button>
+        </div>`);
+      }
+    }
+
+    // คำนวณรวมสัมภาษณ์แบบคุณระบุ: รวมคะแนนเกณฑ์ครูทุกคน / 8 แล้วรวม 100
+    function calcInterviewFinal(student){
+      const scoresObj = getInterviewScores(student);
+      const judges = Object.values(scoresObj || {});
+      const sum = { s1:0, s2:0, s3:0, s4:0 };
+
+      for (const j of judges){
+        sum.s1 += Number(j.score1 || 0);
+        sum.s2 += Number(j.score2 || 0);
+        sum.s3 += Number(j.score3 || 0);
+        sum.s4 += Number(j.score4 || 0);
+      }
+
+      const a1 = sum.s1 / TOTAL_JUDGES;
+      const a2 = sum.s2 / TOTAL_JUDGES;
+      const a3 = sum.s3 / TOTAL_JUDGES;
+      const a4 = sum.s4 / TOTAL_JUDGES;
+      const total100 = a1 + a2 + a3 + a4;
+
+      return { judgeCount: judges.length, a1, a2, a3, a4, total100 };
+    }
+
+    // ============================================================
+    // Admin Dashboard (คงเดิมหลัก ๆ)
+    // ============================================================
+    function renderAdminDashboard(){
+      startAutoRefresh();
+
+      const juniorQueue = studentsData.filter(s => s.level === 'junior' && s.confirmed && !s.is_skipped)
+        .sort((a,b) => Number(a.interview_order||999999) - Number(b.interview_order||999999));
+      const seniorQueue = studentsData.filter(s => s.level === 'senior' && s.confirmed && !s.is_skipped)
+        .sort((a,b) => Number(a.interview_order||999999) - Number(b.interview_order||999999));
+
+      const currentJunior = juniorQueue.length ? juniorQueue[0].interview_order : '-';
+      const currentSenior = seniorQueue.length ? seniorQueue[0].interview_order : '-';
+
+      document.getElementById('app').innerHTML = `
+        <div class="min-h-full p-4 md:p-8 bg-gray-900 text-white">
+          <div class="max-w-6xl mx-auto space-y-8">
+            <div class="flex justify-between items-center mb-8 border-b border-gray-700 pb-4">
+              <div>
+                <h1 class="text-3xl font-bold">Admin Control Panel</h1>
+                <p class="text-gray-400">ผู้ดูแลระบบ: ${currentUser.name || currentUser.username}</p>
+              </div>
+              <button onclick="logout()" class="bg-gray-700 hover:bg-gray-600 px-6 py-2 rounded-xl transition-all">ออกจากระบบ</button>
+            </div>
+
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+              <div class="bg-gray-800 rounded-3xl p-6 border-l-4 border-purple-500">
+                <h2 class="text-xl text-purple-400 font-bold mb-2">คิวปัจจุบัน ม.ต้น</h2>
+                <p class="text-6xl font-extrabold">${currentJunior}</p>
+              </div>
+              <div class="bg-gray-800 rounded-3xl p-6 border-l-4 border-orange-500">
+                <h2 class="text-xl text-orange-400 font-bold mb-2">คิวปัจจุบัน ม.ปลาย</h2>
+                <p class="text-6xl font-extrabold">${currentSenior}</p>
+              </div>
+            </div>
+
+            <div class="mt-8">
+              <h2 class="text-2xl font-bold mb-6">คำสั่งจัดการคิว (Queue Actions)</h2>
+              <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+
+                <button onclick="openQueueManager()" class="bg-gradient-to-r from-blue-600 to-blue-500 hover:from-blue-500 hover:to-blue-400 p-8 rounded-[2rem] text-left transition-all shadow-lg group">
+                  <div class="flex items-center gap-4">
+                    <div class="w-16 h-16 bg-white/20 rounded-2xl flex items-center justify-center text-3xl">📢</div>
+                    <div>
+                      <h3 class="text-2xl font-bold group-hover:translate-x-1 transition-transform">เรียกคิว / ข้ามคิว</h3>
+                      <p class="text-blue-100">กดเพื่อเปลี่ยนคนสัมภาษณ์</p>
+                    </div>
+                  </div>
+                </button>
+
+                <button onclick="showAdminScores()" class="bg-gradient-to-r from-emerald-600 to-emerald-500 hover:from-emerald-500 hover:to-emerald-400 p-8 rounded-[2rem] text-left transition-all shadow-lg group">
+                  <div class="flex items-center gap-4">
+                    <div class="w-16 h-16 bg-white/20 rounded-2xl flex items-center justify-center text-3xl">📊</div>
+                    <div>
+                      <h3 class="text-2xl font-bold group-hover:translate-x-1 transition-transform">ดูผลคะแนนรวม</h3>
+                      <p class="text-emerald-100">ตรวจสอบสถานะการให้คะแนน</p>
+                    </div>
+                  </div>
+                </button>
+
+              </div>
+            </div>
+
+          </div>
+        </div>
+      `;
+    }
+
+    // Queue Manager (คง logic เดิม)
+    let currentQueueLevel = null;
+    let currentQueueIndex = 0;
+
+    function openQueueManager(){
+      showModal(`
+        <div class="p-6 md:p-10 text-center">
+          <h2 class="text-3xl font-extrabold text-gray-900 mb-8">เลือกระดับชั้นที่ต้องการจัดการ</h2>
+          <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
+            <button onclick="showQueueLevel('junior')" class="group bg-gradient-to-br from-purple-500 to-purple-700 text-white p-10 rounded-[2.5rem] shadow-lg hover:shadow-glow-secondary transition-all">
+              <h3 class="text-3xl font-extrabold">ม.ต้น (Junior)</h3>
+            </button>
+            <button onclick="showQueueLevel('senior')" class="group bg-gradient-to-br from-orange-500 to-orange-700 text-white p-10 rounded-[2.5rem] shadow-lg hover:shadow-glow-primary transition-all">
+              <h3 class="text-3xl font-extrabold">ม.ปลาย (Senior)</h3>
+            </button>
+          </div>
+          <button onclick="closeModal(this.closest('.modal-overlay'))" class="btn-secondary w-full px-6 py-4 rounded-2xl font-bold text-lg">ปิดหน้าต่าง</button>
+        </div>
+      `);
+    }
+
+    function showQueueLevel(level){
+      currentQueueLevel = level;
+      currentQueueIndex = 0;
+
+      const students = studentsData
+        .filter(s => s.level === level && s.confirmed && !s.is_skipped)
+        .sort((a,b) => Number(a.interview_order||999999) - Number(b.interview_order||999999));
+
+      if (!students.length){
+        showModal(`<div class="p-8 text-center"><p class="text-gray-800 font-bold text-xl mb-6">ไม่มีคิวสำหรับระดับชั้นนี้</p><button onclick="closeModal(this.closest('.modal-overlay')); openQueueManager();" class="btn-primary text-white px-8 py-3 rounded-xl font-medium">ตกลง</button></div>`);
+        return;
+      }
+      renderQueueManager();
+    }
+
+    function renderQueueManager(){
+      const students = studentsData
+        .filter(s => s.level === currentQueueLevel && s.confirmed && !s.is_skipped)
+        .sort((a,b) => Number(a.interview_order||999999) - Number(b.interview_order||999999));
+
+      const skipped = studentsData
+        .filter(s => s.level === currentQueueLevel && s.confirmed && s.is_skipped)
+        .sort((a,b) => Number(a.interview_order||999999) - Number(b.interview_order||999999));
+
+      if (currentQueueIndex >= students.length) currentQueueIndex = Math.max(0, students.length - 1);
+      const currentStudent = students[currentQueueIndex];
+      if (!currentStudent) return;
+
+      document.querySelectorAll('.modal-overlay').forEach(m => closeModal(m));
+
+      showModal(`
+        <div class="p-6 md:p-10">
+          <div class="flex items-center justify-between mb-8 pb-4 border-b border-gray-100">
+            <div>
+              <h2 class="text-3xl font-extrabold text-gray-900">จัดการคิวสัมภาษณ์</h2>
+              <p class="text-lg text-gray-500 font-medium mt-1">ระดับชั้น: ${getLevelBadge(currentQueueLevel)}</p>
+            </div>
+            <div class="text-right">
+              <p class="text-sm font-bold text-gray-400 uppercase tracking-wider mb-1">เวลาปัจจุบัน</p>
+              <p id="currentTime" class="text-4xl font-extrabold text-gray-800 tabular-nums">${new Date().toLocaleTimeString('th-TH', { hour: '2-digit', minute: '2-digit' })}</p>
+            </div>
+          </div>
+
+          <div class="grid grid-cols-1 md:grid-cols-5 gap-8 mb-8">
+            <div class="md:col-span-2 bg-gradient-to-br from-orange-500 to-orange-600 rounded-[2.5rem] p-8 text-white text-center shadow-lg shadow-orange-500/30 relative overflow-hidden flex flex-col justify-center">
+              <div class="relative z-10">
+                <p class="text-xl font-bold mb-2 opacity-90">ลำดับคิวปัจจุบัน</p>
+                <p class="text-8xl font-extrabold leading-none mb-4">${currentStudent.interview_order || '-'}</p>
+                <div class="bg-white/20 rounded-xl p-4 backdrop-blur-sm inline-block w-full">
+                  <p class="text-lg font-bold truncate">${currentStudent.name}</p>
+                </div>
+              </div>
+            </div>
+
+            <div class="md:col-span-3 bg-gray-50 border-2 border-gray-100 rounded-[2.5rem] p-8">
+              <div class="flex items-center gap-4 mb-6">
+                <div class="w-16 h-16 bg-white rounded-2xl flex items-center justify-center shadow-sm text-3xl">👤</div>
+                <div>
+                  <h3 class="text-2xl font-bold text-gray-900">${currentStudent.name}</h3>
+                  <p class="text-gray-500 font-medium">${currentStudent.current_school || '-'}</p>
+                </div>
+              </div>
+              <div class="grid grid-cols-2 gap-6 text-lg">
+                <div><p class="text-gray-400 font-medium text-sm">เลขที่นั่งสอบ</p><p class="font-bold text-gray-900">${currentStudent.exam_number || '-'}</p></div>
+                <div><p class="text-gray-400 font-medium text-sm">คะแนนรวมข้อเขียน</p><p class="font-extrabold text-orange-600 text-2xl">${currentStudent.total_score || 0}</p></div>
+              </div>
+            </div>
+          </div>
+
+          ${skipped.length ? `
+            <div class="bg-yellow-50 border-2 border-yellow-100 rounded-[2rem] p-6 mb-8">
+              <h3 class="font-bold text-yellow-800 mb-4 text-lg">รอเรียกซ้ำ (${skipped.length} คน)</h3>
+              <div class="flex flex-wrap gap-3">
+                ${skipped.map(s => `
+                  <div class="bg-white border border-yellow-200 rounded-xl p-2 pr-4 flex items-center gap-3 shadow-sm">
+                    <span class="w-10 h-10 bg-yellow-100 text-yellow-700 rounded-lg flex items-center justify-center font-bold">${s.interview_order || '-'}</span>
+                    <span class="font-medium text-gray-800 truncate max-w-[150px]">${s.name}</span>
+                    <button onclick="recallStudent('${s.national_id}')" class="bg-green-500 hover:bg-green-600 text-white p-2 rounded-lg transition-all shadow-sm">เรียก</button>
+                  </div>
+                `).join('')}
+              </div>
+            </div>
+          ` : ''}
+
+          <div class="flex gap-4 sticky bottom-0 bg-white/90 backdrop-blur-md py-4 z-20 border-t border-gray-100">
+            <button onclick="skipQueue()" class="flex-1 bg-yellow-500 hover:bg-yellow-600 text-white px-6 py-4 rounded-2xl font-bold text-xl shadow-sm transition-all">ข้ามคิว (Skip)</button>
+            <button onclick="nextQueue()" class="flex-[2] btn-primary text-white px-6 py-4 rounded-2xl font-bold text-xl shadow-glow-primary">เรียกคิวถัดไป</button>
+          </div>
+        </div>
+      `);
+
+      if (!document.getElementById('timeSetter')){
+        setInterval(() => {
+          const timeEl = document.getElementById('currentTime');
+          if (timeEl) timeEl.textContent = new Date().toLocaleTimeString('th-TH', { hour: '2-digit', minute: '2-digit' });
+        }, 1000);
+        document.body.id = 'timeSetter';
+      }
+    }
+
+    function nextQueue(){
+      const students = studentsData
+        .filter(s => s.level === currentQueueLevel && s.confirmed && !s.is_skipped)
+        .sort((a,b) => Number(a.interview_order||999999) - Number(b.interview_order||999999));
+
+      if (currentQueueIndex < students.length - 1){
+        currentQueueIndex++;
+        renderQueueManager();
+      }else{
+        showModal(`<div class="p-8 text-center"><p class="text-gray-800 font-bold text-xl mb-6">หมดคิวแล้ว</p><button onclick="closeModal(this.closest('.modal-overlay')); renderQueueManager();" class="btn-primary text-white px-8 py-3 rounded-xl font-medium">ตกลง</button></div>`);
+      }
+    }
+
+    async function skipQueue(){
+      const students = studentsData
+        .filter(s => s.level === currentQueueLevel && s.confirmed && !s.is_skipped)
+        .sort((a,b) => Number(a.interview_order||999999) - Number(b.interview_order||999999));
+
+      const currentStudent = students[currentQueueIndex];
+      if (!currentStudent) return;
+
+      await saveData(currentStudent.national_id, { is_skipped: true });
+      currentStudent.is_skipped = true;
+      renderQueueManager();
+    }
+
+    async function recallStudent(studentId){
+      const student = studentsData.find(s => String(s.national_id) === String(studentId));
+      if (!student) return;
+
+      await saveData(student.national_id, { is_skipped: false });
+      student.is_skipped = false;
+      renderQueueManager();
+    }
+
+    function showAdminScores(){ renderScoreSummary(); }
+
+    function renderScoreSummary(){
+      const allConfirmedStudents = studentsData
+        .filter(s => s.confirmed)
+        .sort((a,b) => Number(a.interview_order||999999) - Number(b.interview_order||999999));
+
+      document.getElementById('app').innerHTML = `
+        <div class="min-h-full p-6 md:p-10 bg-gray-900 text-white">
+          <div class="max-w-5xl mx-auto space-y-6">
+            <div class="flex items-center justify-between">
+              <h1 class="text-3xl font-extrabold">สรุปคะแนนสัมภาษณ์</h1>
+              <button onclick="renderAdminDashboard()" class="bg-gray-700 hover:bg-gray-600 px-4 py-2 rounded-xl">ย้อนกลับ</button>
+            </div>
+
+            <div class="bg-gray-800 rounded-2xl p-4 text-gray-200">
+              <p class="text-sm">* “จำนวนกรรมการที่ให้คะแนน” = จำนวน key ใน Students!O (JSON)</p>
+            </div>
+
+            <div class="space-y-3">
+              ${allConfirmedStudents.map(s => {
+                const scoresObj = getInterviewScores(s);
+                const count = Object.keys(scoresObj || {}).length;
+                const calc = calcInterviewFinal(s);
+                const showFinal = (count > 0) ? calc.total100.toFixed(2) : '-';
+                return `
+                  <div class="bg-gray-800 rounded-2xl p-4 flex items-center justify-between">
+                    <div>
+                      <p class="font-bold text-lg">${s.name} <span class="text-gray-400 font-normal">(#${s.interview_order || '-'})</span></p>
+                      <p class="text-sm text-gray-400">${s.current_school || '-'}</p>
+                      <p class="text-sm text-gray-400 mt-1">คะแนนสัมภาษณ์เฉลี่ยรวม (หาร 8): <span class="text-orange-300 font-bold">${showFinal}</span> / 100</p>
+                    </div>
+                    <div class="text-right">
+                      <p class="text-sm text-gray-400">กรรมการที่ให้คะแนน</p>
+                      <p class="text-2xl font-extrabold text-orange-400">${count}</p>
+                    </div>
+                  </div>
+                `;
+              }).join('')}
+            </div>
+          </div>
+        </div>
+      `;
+    }
+
+    // ============================================================
+    // Logout
+    // ============================================================
+    function logout(){
+      stopAutoRefresh();
+      currentUser = null;
+      clearSession();
+      renderLoginPage();
+    }
+
+    // ============================================================
+    // ✅ Main Init
+    // ============================================================
+    async function init(){
+      await initAPI(false);
+
+      const sess = loadSession();
+      if (!sess) return;
+
+      if (sess.type === 'student'){
+        const st = studentsData.find(s => String(s.national_id) === String(sess.id));
+        if (st){
+          currentUser = { ...st, user_type: 'student' };
+          if (!currentUser.confirmed) showConfirmationDialog(currentUser);
+          else renderStudentDashboard();
+        }
+      }else if (sess.type === 'committee'){
+        const u = committeesData.find(c =>
+          String(c.username) === String(sess.username) &&
+          String(c.password) === String(sess.password)
+        );
+        if (u){
+          currentUser = u;
+          if (u.user_type === 'admin') renderAdminDashboard();
+          else renderCommitteeDashboard();
+        }
+      }
+    }
+    window.onload = init;
+  </script>
+</body>
+</html>
