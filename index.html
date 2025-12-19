@@ -276,10 +276,22 @@
     // ============================================================
     // ✅ Fetch helpers
     // ============================================================
-    async function fetchJSON(url, options) {
-      const res = await fetch(url, options);
-      const txt = await res.text();
-      try { return JSON.parse(txt); } catch (_) { return txt; }
+    async function fetchJSON(url, options = {}, timeoutMs = 12000) {
+    const ctrl = new AbortController();
+    const t = setTimeout(() => ctrl.abort(new Error("timeout")), timeoutMs);
+
+    try {
+    const res = await fetch(url, { ...options, signal: ctrl.signal });
+    const txt = await res.text();
+
+    if (!res.ok) {
+      throw new Error(`HTTP ${res.status} ${res.statusText}: ${txt.slice(0, 200)}`);
+    }
+
+    try { return JSON.parse(txt); } catch { return txt; }
+  } finally {
+    clearTimeout(t);
+  }
     }
 
     function normalizeAllData(data) {
@@ -412,14 +424,23 @@
     // ✅ Init + Load data
     // ============================================================
     async function initAPI(silent = false) {
-      const loading = !silent ? showLoadingModal('กำลังดึงข้อมูล...') : null;
-      try {
-        const data = await fetchJSON(API_URL + '?t=' + Date.now());
-        onDataLoaded(data, { silent, loading });
-      } catch (error) {
-        onDataError(error, { silent, loading });
-      }
+  const loading = !silent ? showLoadingModal('กำลังดึงข้อมูล...') : null;
+
+  let lastErr = null;
+  for (let i = 0; i < 3; i++) {
+    try {
+      const data = await fetchJSON(API_URL + '?t=' + Date.now(), {}, 12000);
+      onDataLoaded(data, { silent, loading });
+      return;
+    } catch (e) {
+      lastErr = e;
+      await new Promise(r => setTimeout(r, 600 * (i + 1)));
     }
+  }
+
+  onDataError(lastErr, { silent, loading });
+}
+
 
     function onDataLoaded(data, ctx = {}) {
       if (ctx.loading) closeModal(ctx.loading);
@@ -463,19 +484,47 @@
     }
 
     function onDataError(error, ctx = {}) {
-      if (ctx.loading) closeModal(ctx.loading);
-      console.error(error);
+  if (ctx.loading) closeModal(ctx.loading);
+  console.error(error);
 
-      // ช่วยบอกสาเหตุ "Failed to fetch" ที่เจอบ่อยที่สุด
-      const hint = `
-• ตรวจว่า Web App Deploy เป็น "Anyone" หรือ "Anyone with the link"
-• ลองเปิดลิงก์ API_URL ในแท็บใหม่ให้ขึ้น JSON (ถ้าขึ้นหน้า login/permission จะ fetch ไม่ได้)
-• ตรวจว่า URL ลงท้ายด้วย /exec (ไม่ใช่ /dev)
-      `.trim();
+  // silent refresh: ไม่ต้องรบกวนผู้ใช้
+  if (ctx.silent) return;
 
-      alert("ไม่สามารถเชื่อมต่อฐานข้อมูลได้: " + (error?.message || error) + "\n\n" + hint);
-      if (!ctx.silent) renderLoginPage();
-    }
+  // กันเด้งซ้ำทุกครั้งที่รีโหลด (ภายในแท็บเดียวกัน)
+  const k = 'gate_api_error_shown';
+  if (sessionStorage.getItem(k) === '1') {
+    renderLoginPage();
+    return;
+  }
+  sessionStorage.setItem(k, '1');
+
+  const hint = `
+• ตรวจว่า Vercel มี /api/gas จริง (มีไฟล์ api/gas.js)
+• ตั้งค่า GAS_EXEC_URL เป็นลิงก์ /exec
+• Deploy Apps Script เป็น Anyone / Anyone with the link
+  `.trim();
+
+  showModal(`
+    <div class="p-8 text-center">
+      <p class="text-red-600 font-extrabold text-xl mb-2">เชื่อมต่อฐานข้อมูลไม่สำเร็จ</p>
+      <p class="text-gray-600 mb-4">${(error?.message || error)}</p>
+      <pre class="text-left text-xs bg-gray-50 border border-gray-100 rounded-xl p-4 whitespace-pre-wrap">${hint}</pre>
+      <div class="flex gap-3 mt-6">
+        <button class="btn-secondary flex-1 px-6 py-3 rounded-xl font-bold"
+          onclick="sessionStorage.removeItem('${k}'); closeModal(this.closest('.modal-overlay')); renderLoginPage();">
+          ปิด
+        </button>
+        <button class="btn-primary flex-1 text-white px-6 py-3 rounded-xl font-bold"
+          onclick="sessionStorage.removeItem('${k}'); closeModal(this.closest('.modal-overlay')); initAPI(false);">
+          ลองใหม่
+        </button>
+      </div>
+    </div>
+  `);
+
+  renderLoginPage();
+}
+
 
     // ============================================================
     // ✅ SaveData -> POST {id,data} ไป Apps Script (อัปเดตชีตจริง)
