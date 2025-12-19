@@ -1,37 +1,27 @@
-export default async function handler(req, res) {
-  const GAS_URL = "https://script.google.com/macros/s/AKfycbzF5t3pt3kuSeqkOohfmw2uYfkWmwxYt5DBCk7XtLwGUO_uexzqWundp3MlBBdqoJaj/exec";
+export async function GET(req) {
+  return proxy(req);
+}
+export async function POST(req) {
+  return proxy(req);
+}
 
-  if (req.method === "OPTIONS") {
-    res.setHeader("Access-Control-Allow-Origin", "*");
-    res.setHeader("Access-Control-Allow-Methods", "GET,POST,OPTIONS");
-    res.setHeader("Access-Control-Allow-Headers", "Content-Type");
-    return res.status(200).end();
-  }
+async function proxy(req) {
+  const GAS_EXEC_URL = https://script.google.com/macros/s/AKfycbzF5t3pt3kuSeqkOohfmw2uYfkWmwxYt5DBCk7XtLwGUO_uexzqWundp3MlBBdqoJaj/exec;
+  if (!GAS_EXEC_URL) return new Response("Missing GAS_EXEC_URL", { status: 500 });
 
-  try {
-    const url = new URL(GAS_URL);
-    for (const [k, v] of Object.entries(req.query || {})) {
-      url.searchParams.set(k, v);
-    }
+  const url = new URL(GAS_EXEC_URL);
+  const { searchParams } = new URL(req.url);
+  searchParams.forEach((v, k) => url.searchParams.set(k, v));
 
-    const opt = {
-      method: req.method || "GET",
-      headers: { "Content-Type": "text/plain;charset=utf-8" },
-      redirect: "follow",
-    };
+  const bodyText = (req.method === "GET" || req.method === "HEAD") ? null : await req.text();
 
-    if (opt.method !== "GET" && opt.method !== "HEAD") {
-      opt.body = typeof req.body === "string"
-        ? req.body
-        : JSON.stringify(req.body || {});
-    }
+  const r = await fetch(url.toString(), {
+    method: req.method,
+    headers: { "Content-Type": req.headers.get("content-type") || "text/plain;charset=utf-8" },
+    body: bodyText,
+    redirect: "follow",
+  });
 
-    const r = await fetch(url.toString(), opt);
-    const text = await r.text();
-
-    res.setHeader("Access-Control-Allow-Origin", "*");
-    res.status(200).send(text);
-  } catch (err) {
-    res.status(500).json({ status: "error", message: String(err) });
-  }
+  const text = await r.text();
+  return new Response(text, { status: r.status, headers: { "Content-Type": r.headers.get("content-type") || "application/json; charset=utf-8" } });
 }
