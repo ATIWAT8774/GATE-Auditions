@@ -878,31 +878,7 @@
         return;
       }
 
-      const loadingModal = showLoadingModal('กำลังบันทึกคะแนน... (อาจใช้เวลาสักครู่หากคนใช้เยอะ)');
-
-      try {
-    // ใช้เทคนิคยิงซ้ำถ้าล้มเหลว (Simple Retry Logic)
-    let response;
-    let success = false;
-    let retryCount = 0;
-
-    while(!success && retryCount < 3) {
-       response = await fetchJSON(API_URL, {
-          method: 'POST',
-          body: JSON.stringify(payload)
-       });
-       if(response.status !== 'error' || !response.message.includes("Server Busy")) {
-         success = true;
-       } else {
-         retryCount++;
-         await new Promise(r => setTimeout(r, 1000)); // รอ 1 วิแล้วลองใหม่
-       }
-    }
-    // ... จัดการผลลัพธ์ ...
-  } catch (e) {
-    // ... handle error ...
-  }
-}
+      const loadingModal = showLoadingModal('กำลังบันทึกข้อมูล...');
 
       const patch = { ability, confirmed: true, status: 'รอสัมภาษณ์' };
       if (uploadedAudio) {
@@ -933,7 +909,7 @@
           <button onclick="closeModal(this.closest('.modal-overlay'))" class="btn-primary text-white px-8 py-3 rounded-xl font-medium">ตกลง</button>
         </div>`);
       }
-
+    }
 
     function confirmAndGoToDashboard() {
       document.querySelectorAll('.modal-overlay').forEach(m => closeModal(m));
